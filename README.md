@@ -1,2 +1,2 @@
 # Eva-assistente
-Eva assistentevocale per PC Windows in italiano,franscese,spagnolo, e inglese
+Eva assistente vocale per PC Windows in italiano, francese, spagnolo, e inglese
