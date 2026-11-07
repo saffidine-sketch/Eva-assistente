@@ -1,0 +1,202 @@
+{
+  "_aiuto": [
+    "Questo file lo puoi modificare tu. Dopo ogni modifica riavvia Eva.",
+    "'frasi' = cosa puoi dire (anche pronunciato male: Eva capisce frasi simili).",
+    "'risposte' = cosa risponde (ne sceglie una a caso). Segnaposto: {nome}, {ora}, {data}.",
+    "'continua': true = dopo la risposta Eva resta in ascolto (es. dopo una domanda).",
+    "'azione': 'chiudi' (saluta e chiude la finestra), 'voce_off', 'voce_on'."
+  ],
+
+  "utente": "amico",
+
+  "intenti": [
+    {
+      "nome": "saluto",
+      "frasi": ["ciao", "ciao eva", "buongiorno", "buon giorno", "buonasera", "buona sera",
+                "buon pomeriggio", "salve", "ehi", "hey"],
+      "_nota": "{saluto_ora} diventa Buongiorno / Buon pomeriggio / Buonasera / Ciao (di notte) secondo l'ora del computer",
+      "risposte": ["{saluto_ora}, {nome}! Come stai?", "{saluto_ora}, {nome}. Dimmi pure.",
+                   "{saluto_ora}! Come posso aiutarti, {nome}?"],
+      "continua": true
+    },
+    {
+      "nome": "buonanotte",
+      "frasi": ["buonanotte", "buona notte", "notte", "vado a dormire"],
+      "risposte": ["Buonanotte, {nome}! A domani.", "Dormi bene, {nome}. Buonanotte!",
+                   "Sogni d'oro, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "mi_senti",
+      "frasi": ["mi senti", "mi senti eva", "ci sei", "ci sei eva", "sei qui", "sei li", "sei lì",
+                "sei in ascolto", "mi ascolti", "mi stai ascoltando", "sei sveglia", "mi capisci"],
+      "risposte": ["Ti sento benissimo, {nome}.", "Sì {nome}, ti sento forte e chiaro.",
+                   "Certo, sono qui e ti ascolto."],
+      "continua": true
+    },
+    {
+      "nome": "come_stai",
+      "frasi": ["come stai", "come stai oggi", "come va", "come te la passi", "tutto bene", "come ti senti"],
+      "risposte": ["Sto bene, grazie! E tu?", "Molto bene, grazie {nome}! E tu come stai?",
+                   "Tutto a posto, grazie! Tu come stai?"],
+      "continua": true
+    },
+    {
+      "nome": "sto_bene",
+      "frasi": ["bene", "sto bene", "molto bene", "benissimo", "tutto bene grazie", "bene grazie",
+                "sto benissimo", "non c'è male", "tutto ok"],
+      "risposte": ["Mi fa piacere, {nome}.", "Che bella notizia, {nome}!", "Ne sono contenta, {nome}."],
+      "continua": true
+    },
+    {
+      "nome": "sto_male",
+      "frasi": ["male", "sto male", "non sto bene", "sono stanco", "sono triste", "così così", "cosi cosi"],
+      "risposte": ["Mi dispiace, {nome}. Spero che vada meglio presto.",
+                   "Coraggio {nome}, posso fare qualcosa per te?"],
+      "continua": true
+    },
+    {
+      "nome": "grazie",
+      "frasi": ["grazie", "grazie mille", "grazie tante", "ti ringrazio", "molte grazie",
+                "bravo", "brava", "bravissima", "bravissimo", "ottimo lavoro", "sei brava", "sei bravo"],
+      "risposte": ["Prego, {nome}!", "Di niente, {nome}!", "Figurati, {nome}.", "Con piacere!"]
+    },
+    {
+      "nome": "nome",
+      "frasi": ["come ti chiami", "qual è il tuo nome", "chi sei", "come ti chiamano", "dimmi il tuo nome",
+                "tu chi sei", "chi sei tu"],
+      "risposte": ["Sono Eva, il tuo assistente vocale.", "Mi chiamo Eva, il tuo assistente vocale.",
+                   "Sono Eva, piacere {nome}!"]
+    },
+    {
+      "nome": "ora",
+      "frasi": ["che ore sono", "che ora è", "che ora e", "sai che ore sono", "mi dici l'ora",
+                "dimmi l'ora", "che ore abbiamo", "che ora fa"],
+      "risposte": ["{ora}.", "{ora}, {nome}.", "Guardo l'orologio. {ora}."]
+    },
+    {
+      "nome": "data",
+      "frasi": ["che giorno è oggi", "che giorno è", "che giorno e oggi", "che data è oggi",
+                "che data è", "dimmi la data", "in che giorno siamo", "quanti ne abbiamo oggi",
+                "che giorno della settimana è"],
+      "risposte": ["Oggi è {data}.", "Oggi è {data}, {nome}.", "Siamo a {data}."]
+    },
+    {
+      "nome": "aiuto",
+      "frasi": ["cosa sai fare", "che cosa sai fare", "aiuto", "aiutami", "come puoi aiutarmi",
+                "cosa puoi fare", "che comandi conosci", "quali sono i comandi", "a cosa servi"],
+      "risposte": ["Posso aprire programmi, siti, cartelle e file, cercare su Google e su YouTube, alzare e abbassare il volume e preparare bozze di mail. Posso anche copiare e spostare file e cartelle, per esempio sulla chiavetta, ma sempre con la tua conferma: non sovrascrivo e non cancello mai niente. Per esempio, dì: apri Chrome, oppure copia fatture sulla chiavetta. Se la sfera ti dà fastidio, dì mettiti da parte, oppure nasconditi. Dì chiudi quando hai finito.",
+                   "Ecco cosa so fare, {nome}: aprire programmi, siti, cartelle e file, cercare su Google, regolare il volume e preparare bozze di mail. Copio e sposto file con la tua conferma, ma non cancello mai niente. E poi faccio due chiacchiere.",
+                   "Apro programmi, siti, cartelle e file, cerco su Google, regolo il volume e preparo bozze di mail. Copio e sposto file solo con la tua conferma, e non cancello mai niente. Non invio mai niente, {nome}: la bozza la controlli tu."]
+    },
+    {
+      "nome": "arrivederci",
+      "_nota": "Queste frasi CHIUDONO la conversazione e la finestra. 'chiudi' da solo chiude Eva; 'chiudi Chrome' no. 'soglia' = tolleranza agli errori di pronuncia (0.8 larga, 0.9 stretta).",
+      "soglia": 0.8,
+      "frasi": ["chiudi", "chiuditi", "chiudi eva", "vai via", "vai", "basta", "basta cosi", "grazie basta",
+                "basta grazie", "a dopo", "arrivederci", "ciao ciao", "esci", "puoi andare", "riposo",
+                "a presto", "ci vediamo", "ci sentiamo", "addio", "a più tardi", "buona giornata"],
+      "risposte": ["A dopo, {nome}.", "Arrivederci, {nome}!", "Ciao {nome}, a presto!",
+                   "Ci sentiamo, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "zitta",
+      "frasi": ["stai zitta", "stai zitto", "silenzio", "zitta", "taci", "smetti di parlare",
+                "non parlare", "stai in silenzio"],
+      "risposte": ["D'accordo, {nome}. Da ora non parlo più. Dì «parla» per riattivarmi."],
+      "azione": "voce_off"
+    },
+    {
+      "nome": "parla",
+      "frasi": ["parla", "riprendi a parlare", "puoi parlare", "torna a parlare", "parla pure",
+                "riattiva la voce"],
+      "risposte": ["Eccomi di nuovo, {nome}!", "Va bene, {nome}, riprendo a parlare."],
+      "azione": "voce_on"
+    }
+  ],
+
+  "fisse": {
+    "timeout": ["Torno a riposo, chiamami quando vuoi."],
+    "chiudi_programmi": ["Chiudere i programmi non lo faccio ancora, {nome}."],
+
+    "cartella_ok": ["Apro la cartella {cosa}.", "Ho aperto la cartella {cosa}.", "Ecco la cartella {cosa}."],
+    "file_ok": ["Aperto il file {cosa}.", "Apro il file {cosa}.", "Ecco il file {cosa}."],
+    "cartella_non_trovata": ["Ho capito: apri cartella {cosa}. Non l'ho trovata."],
+    "file_non_trovato": ["Ho capito: apri file {cosa}. Non l'ho trovato."],
+    "oggetto_non_trovato": ["Ho capito: apri {cosa}. Non l'ho trovato."],
+    "non_trovato_capito": ["Ho capito: {capito}. Non l'ho trovato."],
+    "non_trovato_multi": ["Non ho trovato niente, {nome}."],
+    "cartella_ok_parziale": ["Apro {cosa}. Se non è questa, dimmi."],
+    "file_ok_parziale": ["Apro il file {cosa}. Se non è questo, dimmi."],
+    "azione_vietata": ["Questo non lo faccio, {nome}: posso aprire, e copiare o spostare con la tua conferma."],
+    "spegni": ["Spengo Eva. A presto, {nome}."],
+    "vista_ridotta": ["Mi metto da parte.", "Eccomi qui da parte."],
+    "vista_grande": ["Eccomi qui.", "Eccomi al centro."],
+    "vista_nascosta": ["Mi nascondo, ma ti ascolto."],
+    "vista_angolo": ["Mi sposto {dove}.", "Va bene, {dove}."],
+    "op_annullato": ["Annullato."],
+    "op_cancella": ["Per sicurezza non cancello, {nome}. Fallo tu a mano."],
+    "op_spente": ["Le operazioni sui file sono spente."],
+    "op_sola_lettura": ["Modalità sola lettura attiva, {nome}. Non copio né sposto niente."],
+    "op_normale": ["Modalità normale, {nome}. Posso di nuovo copiare e spostare, sempre con la tua conferma."],
+    "op_occupata": ["Sto ancora lavorando su un'altra operazione, {nome}. Aspetta che finisca."],
+    "op_fermo": ["Fermo la copia, {nome}."],
+    "op_protetta": ["Questa cartella è protetta, {nome}."],
+    "op_nessuna_chiavetta": ["Non vedo nessuna chiavetta collegata, {nome}."],
+    "op_non_trovato": ["Non ho trovato {cosa}, {nome}."],
+    "op_incerto": ["Non sono sicura di quale intendi, {nome}. Non faccio niente."],
+    "op_dest_non_trovata": ["Non ho trovato la cartella {cosa}, {nome}."],
+    "op_nessuna_cartella": ["Non ho una cartella aperta, {nome}. Dimmi in quale cartella."],
+    "op_dentro_se_stessa": ["Non posso metterla dentro se stessa, {nome}."],
+    "op_gia_li": ["È già in quella cartella, {nome}."],
+    "op_spazio": ["Non c'è abbastanza spazio sulla destinazione, {nome}: servono {serve} e ne restano {resta}."],
+    "op_avvio": ["Va bene, {verbo}."],
+    "op_copiato": ["Copiato {cosa}."],
+    "op_tagliato": ["Tagliato {cosa}. Non si sposta finché non dici incolla, e te lo chiedo di nuovo."],
+    "op_appunti_vuoti": ["Non ho niente da incollare, {nome}."],
+    "op_appunti_spariti": ["L'elemento che avevo copiato non c'è più, {nome}."],
+    "op_non_capito": ["Non ho capito cosa {verbo}, {nome}."],
+    "op_verbo_iniziale": ["Per copiare o spostare comincia con il verbo, {nome}: per esempio, copia Katia documenti sulla chiavetta."],
+    "non_trovato_generico": ["Non riesco ad aprirlo, {nome}."],
+    "programmi_vietati": ["Per sicurezza non apro programmi dai file, {nome}."],
+    "nessuna_cartella_aperta": ["Non ho ancora aperto nessuna cartella, {nome}."],
+    "nessuna_precedente": ["Non c'è una cartella precedente, {nome}."],
+    "gia_in_alto": ["Siamo già alla cartella più alta, {nome}."],
+    "annullato": ["Va bene, {nome}."],
+    "indice_aggiorno": ["Aggiorno l'indice, {nome}."],
+    "indice_in_preparazione": ["Sto ancora preparando l'indice delle cartelle, {nome}. Riprova tra poco."],
+    "alias_ok": ["Fatto, {nome}. Ora «{alias}» è la cartella {cosa}."],
+    "alias_no": ["Non ho capito quale cartella intendi, {nome}."],
+    "multi_ok": ["Apro {elenco}.", "Ho aperto {elenco}."],
+    "multi_parziale": ["Ho aperto {elenco}, ma non ho trovato {mancanti}, {nome}."]
+  },
+
+  "non_so": [
+    "Questo non lo so ancora fare, {nome}, ma posso aprire programmi, cercare su Google e altro. Dimmi «aiuto» per l'elenco.",
+    "Su questo non so ancora aiutarti. Posso aprire programmi, siti e cartelle, cercare su Google e regolare il volume. Dì «aiuto» per sapere tutto.",
+    "Ancora non so farlo, {nome}. Prova con un comando, per esempio «apri Chrome», oppure dì «aiuto»."
+  ],
+
+  "vox_da_solo": ["Dimmi, {nome}.", "Sì, {nome}?", "Ti ascolto, {nome}.", "Eccomi, {nome}."],
+
+  "conferme": {
+    "apri": ["Apro {cosa}.", "Ho aperto {cosa}.", "Ecco {cosa}.", "{cosa}, subito."],
+    "volume_su": ["Volume alzato.", "Ho alzato il volume."],
+    "volume_giu": ["Volume abbassato.", "Ho abbassato il volume."],
+    "volume_livello": ["Volume al {livello} per cento."],
+    "muto": ["Audio disattivato."],
+    "togli_muto": ["Audio riattivato."],
+    "cerca": ["Cerco {cosa}.", "Ecco i risultati per {cosa}."],
+    "mail": ["Ho preparato la bozza, {nome}. Non l'ho inviata: controllala tu."],
+    "impara": ["Fatto, ho imparato."],
+    "altro": ["Fatto, {nome}.", "Fatto."]
+  },
+
+  "errori": {
+    "non_trovato": ["Non ho trovato questo, {nome}."],
+    "non_capito": ["Non ho capito, puoi ripetere?"],
+    "incerto": ["Non sono sicura. Forse intendevi: {cosa}. Puoi ripetere?"],
+    "errore": ["Scusa {nome}, c'è stato un problema."]
+  }
+}

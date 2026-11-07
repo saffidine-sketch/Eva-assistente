@@ -1,0 +1,189 @@
+{
+  "_aiuto": [
+    "Versione INGLESE di risposte.json (stessa struttura). Puoi modificarla. Dopo ogni modifica riavvia Eva.",
+    "'frasi' = cosa puoi dire. 'risposte' = cosa risponde. Segnaposto: {nome}, {ora}, {data}, {saluto_ora}."
+  ],
+
+  "utente": "friend",
+
+  "intenti": [
+    {
+      "nome": "saluto",
+      "frasi": ["hello", "hello eva", "hi", "hi eva", "hey", "hey eva", "good morning", "good afternoon", "good evening"],
+      "risposte": ["{saluto_ora}, {nome}! How are you?", "{saluto_ora}, {nome}. Go ahead.",
+                   "{saluto_ora}! How can I help you, {nome}?"],
+      "continua": true
+    },
+    {
+      "nome": "buonanotte",
+      "frasi": ["good night", "night night", "i am going to sleep", "i'm going to bed"],
+      "risposte": ["Good night, {nome}! See you tomorrow.", "Sleep well, {nome}. Good night!",
+                   "Sweet dreams, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "mi_senti",
+      "frasi": ["can you hear me", "do you hear me", "are you there", "are you listening", "are you awake",
+                "eva are you there", "can you hear me eva", "do you understand me"],
+      "risposte": ["I can hear you perfectly, {nome}.", "Yes {nome}, loud and clear.",
+                   "Of course, I'm here and I'm listening."],
+      "continua": true
+    },
+    {
+      "nome": "come_stai",
+      "frasi": ["how are you", "how are you today", "how is it going", "how do you feel", "how are you doing", "what's up"],
+      "risposte": ["I'm fine, thank you! And you?", "Very well, thanks {nome}! How are you?",
+                   "All good, thanks! And you?"],
+      "continua": true
+    },
+    {
+      "nome": "sto_bene",
+      "frasi": ["fine", "i am fine", "i'm fine", "i am good", "i'm good", "very well", "great", "i'm great",
+                "fine thanks", "all good", "not bad"],
+      "risposte": ["I'm glad, {nome}.", "That's great news, {nome}!", "I'm happy to hear that, {nome}."],
+      "continua": true
+    },
+    {
+      "nome": "sto_male",
+      "frasi": ["bad", "i am not well", "i'm not well", "i am tired", "i'm tired", "i am sad", "i'm sad", "so so"],
+      "risposte": ["I'm sorry, {nome}. I hope you feel better soon.",
+                   "Cheer up {nome}, can I do something for you?"],
+      "continua": true
+    },
+    {
+      "nome": "grazie",
+      "frasi": ["thank you", "thanks", "thanks a lot", "thank you very much", "many thanks",
+                "good job", "well done", "great job", "you are great", "you're great"],
+      "risposte": ["You're welcome, {nome}!", "No problem, {nome}!", "Anytime, {nome}.", "My pleasure!"]
+    },
+    {
+      "nome": "nome",
+      "frasi": ["what is your name", "what's your name", "who are you", "what are you called", "tell me your name"],
+      "risposte": ["I'm Eva, your voice assistant.", "My name is Eva, your voice assistant.",
+                   "I'm Eva, nice to meet you {nome}!"]
+    },
+    {
+      "nome": "ora",
+      "frasi": ["what time is it", "what's the time", "do you know the time", "tell me the time", "what time do we have"],
+      "risposte": ["{ora}.", "{ora}, {nome}.", "Let me check the clock. {ora}."]
+    },
+    {
+      "nome": "data",
+      "frasi": ["what day is it", "what day is it today", "what is today's date", "what's the date", "tell me the date",
+                "what is the date today", "which day is today"],
+      "risposte": ["Today is {data}.", "Today is {data}, {nome}.", "It's {data}."]
+    },
+    {
+      "nome": "aiuto",
+      "frasi": ["what can you do", "help", "help me", "how can you help me", "what commands do you know",
+                "what are the commands", "what are you for"],
+      "risposte": ["I can open programs, websites, folders and files, search Google and YouTube, raise and lower the volume and prepare email drafts. I can also copy and move files and folders, for example to a USB stick, but always with your confirmation: I never overwrite or delete anything. For example, say: open Chrome, or copy invoices to the USB stick. If the sphere bothers you, say move aside, or hide. Say close when you are done.",
+                   "Here is what I can do, {nome}: open programs, websites, folders and files, search Google, adjust the volume and prepare email drafts. I copy and move files with your confirmation, but I never delete anything. And we can chat.",
+                   "I open programs, websites, folders and files, search Google, adjust the volume and prepare email drafts. I copy and move files only with your confirmation, and I never delete anything. I never send anything, {nome}: you check the draft."]
+    },
+    {
+      "nome": "arrivederci",
+      "soglia": 0.8,
+      "frasi": ["close", "close eva", "go away", "that's all", "that is all", "i am done", "i'm done", "goodbye",
+                "bye", "bye bye", "see you", "see you later", "see you soon", "you can go", "rest", "good day", "stop"],
+      "risposte": ["See you, {nome}.", "Goodbye, {nome}!", "Bye {nome}, see you soon!", "Talk to you later, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "zitta",
+      "frasi": ["be quiet", "stop talking", "silence", "shut up", "don't talk", "stay silent", "quiet"],
+      "risposte": ["Alright, {nome}. I won't speak anymore. Say «speak» to turn me back on."],
+      "azione": "voce_off"
+    },
+    {
+      "nome": "parla",
+      "frasi": ["speak", "talk", "start talking again", "you can talk", "talk again", "turn the voice on"],
+      "risposte": ["I'm back, {nome}!", "All right, {nome}, I'm talking again."],
+      "azione": "voce_on"
+    }
+  ],
+
+  "fisse": {
+    "timeout": ["Going back to rest, call me whenever you like."],
+    "chiudi_programmi": ["I can't close programs yet, {nome}."],
+
+    "cartella_ok": ["Opening the folder {cosa}.", "I opened the folder {cosa}.", "Here is the folder {cosa}."],
+    "file_ok": ["Opened the file {cosa}.", "Opening the file {cosa}.", "Here is the file {cosa}."],
+    "cartella_non_trovata": ["I understood: open folder {cosa}. I couldn't find it."],
+    "file_non_trovato": ["I understood: open file {cosa}. I couldn't find it."],
+    "oggetto_non_trovato": ["I understood: open {cosa}. I couldn't find it."],
+    "non_trovato_capito": ["I understood: {capito}. I couldn't find it."],
+    "non_trovato_multi": ["I didn't find anything, {nome}."],
+    "cartella_ok_parziale": ["Opening {cosa}. If it's not this one, tell me."],
+    "file_ok_parziale": ["Opening the file {cosa}. If it's not this one, tell me."],
+    "azione_vietata": ["I don't do that, {nome}: I can open, and copy or move with your confirmation."],
+    "spegni": ["Shutting Eva down. See you soon, {nome}."],
+    "vista_ridotta": ["I'll step aside.", "Here I am, off to the side."],
+    "vista_grande": ["Here I am.", "Here I am in the center."],
+    "vista_nascosta": ["I'm hiding, but I'm listening."],
+    "vista_angolo": ["Moving {dove}.", "Alright, {dove}."],
+    "op_annullato": ["Cancelled."],
+    "op_cancella": ["For safety I don't delete, {nome}. Please do it by hand."],
+    "op_spente": ["File operations are turned off."],
+    "op_sola_lettura": ["Read-only mode is on, {nome}. I won't copy or move anything."],
+    "op_normale": ["Normal mode, {nome}. I can copy and move again, always with your confirmation."],
+    "op_occupata": ["I'm still working on another operation, {nome}. Please wait until it finishes."],
+    "op_fermo": ["Stopping the copy, {nome}."],
+    "op_protetta": ["This folder is protected, {nome}."],
+    "op_nessuna_chiavetta": ["I don't see any USB stick connected, {nome}."],
+    "op_non_trovato": ["I couldn't find {cosa}, {nome}."],
+    "op_incerto": ["I'm not sure which one you mean, {nome}. I'm not doing anything."],
+    "op_dest_non_trovata": ["I couldn't find the folder {cosa}, {nome}."],
+    "op_nessuna_cartella": ["I don't have an open folder, {nome}. Tell me which folder."],
+    "op_dentro_se_stessa": ["I can't put it inside itself, {nome}."],
+    "op_gia_li": ["It's already in that folder, {nome}."],
+    "op_spazio": ["There isn't enough space on the destination, {nome}: {serve} needed and {resta} left."],
+    "op_avvio": ["Alright, {verbo}."],
+    "op_copiato": ["Copied {cosa}."],
+    "op_tagliato": ["Cut {cosa}. It won't move until you say paste, and I'll ask you again."],
+    "op_appunti_vuoti": ["I have nothing to paste, {nome}."],
+    "op_appunti_spariti": ["The item I had copied is gone, {nome}."],
+    "op_non_capito": ["I didn't understand what to {verbo}, {nome}."],
+    "op_verbo_iniziale": ["To copy or move, start with the verb, {nome}: for example, copy Katia documents to the USB stick."],
+    "non_trovato_generico": ["I can't open it, {nome}."],
+    "programmi_vietati": ["For safety I don't open programs from files, {nome}."],
+    "nessuna_cartella_aperta": ["I haven't opened any folder yet, {nome}."],
+    "nessuna_precedente": ["There is no previous folder, {nome}."],
+    "gia_in_alto": ["We're already at the top folder, {nome}."],
+    "annullato": ["Alright, {nome}."],
+    "indice_aggiorno": ["Updating the index, {nome}."],
+    "indice_in_preparazione": ["I'm still preparing the folder index, {nome}. Try again shortly."],
+    "alias_ok": ["Done, {nome}. Now «{alias}» is the folder {cosa}."],
+    "alias_no": ["I didn't understand which folder you mean, {nome}."],
+    "multi_ok": ["Opening {elenco}.", "I opened {elenco}."],
+    "multi_parziale": ["I opened {elenco}, but I couldn't find {mancanti}, {nome}."]
+  },
+
+  "non_so": [
+    "I don't know how to do that yet, {nome}, but I can open programs, search Google and more. Say «help» for the list.",
+    "I can't help with that yet. I can open programs, websites and folders, search Google and adjust the volume. Say «help» to know everything.",
+    "I can't do that yet, {nome}. Try a command, for example «open Chrome», or say «help»."
+  ],
+
+  "vox_da_solo": ["Go ahead, {nome}.", "Yes, {nome}?", "I'm listening, {nome}.", "Here I am, {nome}."],
+
+  "conferme": {
+    "apri": ["Opening {cosa}.", "I opened {cosa}.", "Here is {cosa}.", "{cosa}, right away."],
+    "volume_su": ["Volume up.", "I raised the volume."],
+    "volume_giu": ["Volume down.", "I lowered the volume."],
+    "volume_livello": ["Volume at {livello} percent."],
+    "muto": ["Sound off."],
+    "togli_muto": ["Sound back on."],
+    "cerca": ["Searching {cosa}.", "Here are the results for {cosa}."],
+    "mail": ["I prepared the draft, {nome}. I didn't send it: please check it."],
+    "impara": ["Done, I learned it."],
+    "altro": ["Done, {nome}.", "Done."]
+  },
+
+  "errori": {
+    "non_trovato": ["I didn't find that, {nome}."],
+    "non_capito": ["I didn't understand, can you repeat?"],
+    "incerto": ["I'm not sure. Maybe you meant: {cosa}. Can you repeat?"],
+    "errore": ["Sorry {nome}, there was a problem."]
+  }
+}

@@ -1,0 +1,329 @@
+EVA - LEGGIMI (versione 2.1)
+============================
+Per installare Eva e creare la chiave gratuita di Groq vedi README.md.
+Assistente vocale per Windows. Per i dettagli su copia e sposta guarda anche aiuto_eva.txt.
+
+=====================================================================
+COME FUNZIONA EVA (aggiornato il 06/11/2026)
+=====================================================================
+
+1) COME FUNZIONA EVA
+  Eva è un programma Python (dettatura.py) che gira sul tuo PC. Ha una sfera sullo schermo, una voce
+  femminile italiana (Elsa di Windows) e due modi per ascoltarti:
+    - dici "Eva" e poi il comando: resta in ascolto finché non dici "chiudi", "basta", "arrivederci";
+    - tieni premuto F9 e parla: scrive il testo dettato (dettatura) senza eseguire comandi.
+  Quando senti la frase, Eva la trascrive (Whisper, in locale) e poi decide cosa fare, in quest'ordine:
+    1. posizione della sfera (mettiti da parte, al centro...);
+    2. copia / sposta / incolla (sempre con conferma);
+    3. chiusura (chiudi, basta...) e "chiudi Chrome / chiudi la cartella" (chiude solo quella finestra, mai Eva);
+    4. meteo;
+    5. saluti e chiacchiere note (risposte.json);
+    6. comandi del PC (apri, cerca, volume, mail...);
+    7. se nessun comando corrisponde: Groq traduce l'ordine (vedi punto 6);
+    8. se ancora niente: chiacchiera libera con Groq.
+  I comandi veri vengono SEMPRE prima della chat: Eva non risponde "non posso" a un ordine che sa eseguire.
+  Eva può aprire e chiudere programmi, gestire file e cartelle e dettare testo.
+
+2) ELENCO DEI FILE
+  Programma
+    dettatura.py          Il file principale. In cima ci sono tutte le impostazioni. Avvia tutto.
+    vox_core.py           Il "cuore": ascolta il microfono, F9, trascrive, decide cosa fare, saluta, meteo.
+    vox_ui.py             La finestra con la sfera, il pulsante X, l'icona accanto all'orologio.
+    vox_sfera.py          Il disegno della sfera animata.
+    vox_voce.py           La voce (sintesi vocale di Windows).
+    vox_cervello.py       Risposte, chiacchiere, riconoscimento di "chiudi", frasi per Groq (chat).
+    vox_ia_azioni.py      Groq che traduce un ordine in un'azione (apri, chiudi...) che il codice esegue.
+    vox_meteo.py          Il meteo (Open-Meteo) e la città predefinita.
+    vox_inizio.py         La schermata iniziale: il tuo nome e la chiave gratuita di Groq (la chiave non va in nessun file).
+    comandi.py            Normalizza le frasi (maiuscole, accenti, parole simili).
+    azioni.py             Esegue i comandi: apri, chiudi finestra, cerca, volume, bozze di mail.
+    vox_file.py           Cartelle e file: indice, "apri la cartella...", "apri il file...".
+    vox_operazioni.py     Copia, sposta, taglia, incolla (con conferma e regole di sicurezza).
+  Avvio
+    avvia_eva.bat                    Avvia Eva a mano, senza finestra nera.
+    cambia_nome_e_chiave.bat         Riapre la schermata iniziale per cambiare nome o chiave (chiudi prima Eva).
+    attiva_avvio_automatico.bat      Attiva l'avvio all'accensione del PC (Eva + guardia).
+    disattiva_avvio_automatico.bat   Lo disattiva.
+    eva_avvio_automatico.ps1         Crea/toglie i collegamenti "Eva.lnk" e "Eva Guardia.lnk" nella cartella
+                                     Esecuzione automatica di Windows.
+    guardia_eva.ps1                  La guardia (punto 4).
+  Dati e impostazioni
+    risposte.json         Saluti e chiacchiere note, frasi fisse di Eva.
+    correzioni.json       Correzioni di parole sentite male dal riconoscimento vocale.
+    alias_utente.json     I tuoi nomi per programmi e cartelle ("impara").
+    rubrica.json          Contatti per le mail.
+    impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo).
+    indice_cartelle.json  Indice delle tue cartelle e file (si aggiorna da solo).
+    non_trovati.txt       Cose chieste e non trovate.
+  Registri (log)
+    eva.log               Il registro principale (punto 9).
+    guardia_eva.log       Il registro della guardia.
+    operazioni.log        Il registro di copie e spostamenti.
+    vox.log               Il vecchio registro di quando Eva si chiamava Vox (non si scrive più).
+  Altro
+    chiusura_volontaria.flag   File segnale creato quando chiudi Eva con la X (punto 5). Di solito non c'è.
+    aiuto_eva.txt, LEGGIMI.txt Questa documentazione.
+    backup\                    Copie di sicurezza (con la data nel nome). Non cancellarle.
+    documentazione\            I documenti Word di ricostruzione.
+    __pycache__\               File temporanei di Python. Si possono ignorare.
+
+3) COMANDI VOCALI DISPONIBILI (si dicono dopo "Eva", o durante la conversazione)
+  Aprire:   apri Chrome / apri YouTube / apri blocco note / apri la cartella documenti / apri il file ...
+  Chiudere: chiudi Chrome / chiudi il browser / chiudi la cartella / chiudi finestra   (chiude solo quella finestra)
+  Chiudere Eva (la finestra): chiudi / basta / arrivederci / a dopo / ho finito...   Fermare TUTTO: "spegni Eva"
+  Cercare:  cerca ricette di pasta (Google)   cerca su YouTube ...
+  Volume:   alza il volume / abbassa il volume / muto / volume al 30
+  Mail:     scrivi una mail a Mario oggetto ciao dice a domani   (solo bozza, non la invia mai)
+  Meteo:    che tempo fa oggi / che tempo fa a Milano / meteo di domani / previsioni per Roma
+  Sfera:    mettiti da parte / mettiti al centro / nasconditi / sposta in alto a sinistra ...
+  File:     copia / sposta / taglia / incolla ... (vedi l'elenco sopra: sempre con conferma a voce)
+  Voce:     stai zitta / parla
+  Chiacchiere: come stai, che ore sono, che giorno è, grazie... e qualsiasi domanda libera (risponde Groq)
+  Aiuto:    "Eva, cosa sai fare?" oppure "aiuto"
+
+4) COME PARTE ALL'ACCENSIONE E COME LAVORA LA GUARDIA
+  Nella cartella Esecuzione automatica di Windows ci sono due collegamenti, creati da attiva_avvio_automatico.bat:
+    - "Eva.lnk": avvia pythonw.exe dettatura.py (percorso completo di Python, cartella di lavoro = cartella di Eva,
+      nessuna finestra nera);
+    - "Eva Guardia.lnk": avvia guardia_eva.ps1, nascosta.
+  Ordine all'accensione: appare subito la sfera, poi Eva carica in secondo piano il modello veloce, Groq e il
+  microfono e saluta a voce ("Ciao <tuo nome>, come stai? Di cosa hai bisogno oggi?"). Il modello preciso si carica dopo.
+  Se il microfono non è ancora pronto Eva riprova per circa 2 minuti.
+  La guardia:
+    1) controlla se esiste chiusura_volontaria.flag (se c'è: non riavvia Eva e lo cancella, vedi punto 5);
+    2) aspetta che la rete (api.groq.com) e l'audio di Windows siano pronti, al massimo 2 minuti ciascuno;
+    3) controlla ogni 2 secondi (fino a 30) se Eva risponde sulla sua porta locale 47625;
+    4) se non risponde la riavvia, fino a 3 tentativi;
+    5) scrive tutto in guardia_eva.log con data e ora.
+  Una sola copia di Eva alla volta: una seconda copia non parte, mostra solo la finestra di quella già attiva.
+
+5) LA X SULLA SFERA E IL FILE chiusura_volontaria.flag
+  Sulla sfera c'è un piccolo pulsante X, discreto. Cliccandolo Eva si chiude completamente, senza chiedere conferma.
+  Prima di chiudersi: scrive in eva.log "Eva chiusa dall'utente (pulsante X sulla sfera)" e crea nella cartella di
+  Eva il file chiusura_volontaria.flag. La guardia, se trova quel file, NON riavvia Eva e lo cancella: così al
+  prossimo avvio del PC tutto riparte normale. Per riavviare Eva a mano: avvia_eva.bat.
+  Se trovi il file .flag nella cartella, vuol dire che Eva è stata chiusa con la X e la guardia non è ancora passata.
+
+6) COME GROQ RICONOSCE GLI ORDINI
+  Eva prova SEMPRE prima i comandi fissi (veloci, anche senza internet). Solo se non capisce la frase, la manda
+  a Groq (vox_ia_azioni.py), che NON esegue niente: risponde solo con un'azione in formato fisso, per esempio
+  {"azione": "chiudi", "nome": "browser"}. Azioni possibili: apri, apri_cartella, chiudi, cerca, volume_su,
+  volume_giu, muto, togli_muto, copia, sposta, incolla, chiarisci, nessuna. Il codice controlla l'azione e la
+  esegue con le funzioni di sempre, con le stesse regole di sicurezza (mai cancellare, copia e sposta con conferma,
+  mai chiudere Eva). Se la frase è poco chiara l'azione è "chiarisci" e Eva fa una domanda breve ("Intendevi aprire
+  Chrome?"): non risponde mai che non può. Se non è un ordine ("nessuna"), si passa alla chiacchiera libera, dove
+  Groq sa che Eva può aprire/chiudere programmi, gestire file e dettare, e non deve dire di non poterlo fare.
+  Senza internet o se Groq non risponde, Eva lo dice a voce. La chiave si legge dalla variabile d'ambiente
+  GROQ_API_KEY (non è scritta nel codice). Si spegne con GROQ_AZIONI = False in dettatura.py.
+
+7) COME FUNZIONA IL METEO
+  Lo cerca il codice, non Groq: usa Open-Meteo (gratuito, senza chiave). Frasi: "che tempo fa oggi", "che tempo
+  fa a Milano", "meteo di domani". Se non dici la città usa quella predefinita; la PRIMA volta Eva la chiede e la
+  salva in impostazioni_eva.json (chiave "citta_meteo"). Per cambiare la città predefinita: modifica o cancella
+  "citta_meteo" in quel file e Eva la richiederà. Per una volta sola basta dire "che tempo fa a <città>".
+  Il codice passa i dati (temperatura, cielo, pioggia) a Groq, che li dice in una frase breve; se Groq non risponde
+  la frase la fa il codice. Se internet non risponde Eva dice che non riesce a collegarsi; se la città non esiste
+  lo dice.
+
+8) COME SI RIAVVIA / SI CONTROLLA
+  Riavvio a mano: avvia_eva.bat. Attivare/disattivare l'avvio automatico: i due file .bat. Se Eva non parte,
+  guarda eva.log e guardia_eva.log.
+
+9) DOVE SI TROVANO I LOG (tutti nella cartella di Eva)
+  eva.log         avvio, frasi sentite, azioni, risposte dette, errori, tempi di avvio ("TEMPO avvio"), meteo, Groq.
+                  Si "ruota": i vecchi sono eva.log.1 ed eva.log.2.
+  guardia_eva.log cosa ha fatto la guardia a ogni accensione (rete, audio, Eva attiva o riavviata, chiusura volontaria).
+  operazioni.log  ogni copia o spostamento di file.
+
+=====================================================================
+REGISTRO DELLE MODIFICHE
+=====================================================================
+06/11/2026
+  - Avvio automatico e guardia: Eva.lnk e Eva Guardia.lnk nell'Esecuzione automatica; la guardia aspetta rete e audio,
+    riavvia Eva se manca e scrive guardia_eva.log. Percorsi completi, nessun percorso relativo.
+  - Log: eva.log registra avvii, errori non gestiti anche nei thread, saluti e risposte.
+  - Eva non dice più "non posso": istruzioni a Groq aggiornate; "chiudi/apri ..." passano prima dai comandi veri.
+  - Pulsante X sulla sfera + file chiusura_volontaria.flag; guardia_eva.ps1 non riavvia Eva se lo trova e lo cancella.
+  - Groq traduce gli ordini in azioni fisse (vox_ia_azioni.py) e il codice le esegue; domanda breve se poco chiaro.
+  - Avvio più veloce: la sfera compare subito (0,2-0,8 s); saluto a circa 4,6-7 s invece di 12-27 s; modello preciso
+    e Groq in secondo piano; tempi scritti in eva.log ("TEMPO avvio"). La guardia controlla ogni 2 secondi
+    invece di aspettare 20 secondi fissi.
+  - Meteo con Open-Meteo (nuovo vox_meteo.py), città predefinita in impostazioni_eva.json.
+  - Corretto il salvataggio della posizione della sfera: non cancella più gli altri dati di impostazioni_eva.json.
+  - Documentazione: aggiornato aiuto_eva.txt, creato LEGGIMI.txt. Copie di sicurezza nella cartella backup.
+
+06/11/2026 (risposte più fluide)
+  - Chat con Groq in STREAMING: Eva parte a parlare dalla prima frase mentre il resto del testo sta ancora arrivando
+    (la voce dice una frase alla volta, divise anche alle virgole se la frase è lunga). vox_cervello.py: chat_stream e
+    frasi_da_stream; vox_core.py: _chat_streaming. Si spegne con GROQ_STREAMING = False in dettatura.py.
+  - Modello veloce: qwen/qwen3.8-27b per chat e ordini. Se dà errore (per esempio il limite del piano gratuito:
+    7000 token di input al minuto) Eva riprova da sola con openai/gpt-oss-120b e lo scrive in eva.log.
+  - Risposte brevi con un limite: massimo 40 parole nelle istruzioni, 250 token e 3 frasi dette al massimo.
+  - Ordini (apri, chiudi...): eseguiti subito, conferma di poche parole ("Apro Calcolatrice.").
+  - Tempi scritti in eva.log: "TEMPO chat" (prima frase, testo intero, fine voce), "TEMPO ordine" (traduzione Groq,
+    azione eseguita) e "TEMPO trascrizione" (livello debug).
+06/11/2026 (frasi con "apri" e trascrizione)
+  - "apri ..." con un resto lungo (più di 4 parole) o che contiene "Eva", e che non è un programma, file o cartella
+    noto, ora è una chiacchiera: non cerca sul disco e non si divide in più cose da aprire (azioni.py,
+    vox_file.py: oggetto_noto). "apri A e B" si divide solo se A e B sono entrambi noti.
+  - La parola "appure" (o simili) non vale più come "apri": per le forme storpiate servono la stessa lettera
+    iniziale e al massimo una lettera di differenza nella lunghezza.
+  - La ricerca sul disco parte solo se dici "cartella" o "file" e il nome è breve (massimo 4 parole).
+  - Trascrizione: prima la veloce; il modello preciso solo se la veloce non basta (poco sicura, oppure un ordine di
+    cui non riconosce il nome, oppure Eva aspetta un sì/no). Impostazioni in dettatura.py:
+    TRASCRIZIONE_VELOCE_PRIMA e CONFIDENZA_VELOCE_MIN. F9 (dettatura) usa sempre il preciso. In eva.log:
+    righe "TRASCRIZIONE: ...".
+  - Trascrizione "vuota" a riposo con 0,01 s: è normale. Il rilevatore di volume scatta anche con rumori (colpi,
+    ronzii, tastiera); il filtro delle pause di Whisper non trova parlato e non fa nemmeno la trascrizione.
+=====================================================================
+LINGUE (italiano, francese, spagnolo, inglese) - 06/11/2026
+=====================================================================
+  Cambiare lingua a voce:  "Eva, parla francese" / "Eva, speak English" / "Eva, habla español" / "Eva, parle italien" /
+                           "Eva, cambia lingua in spagnolo" / "switch to French" / "passe en anglais".
+  La scelta si SALVA in impostazioni_eva.json (chiave "lingua") e vale anche al prossimo avvio. La lingua di partenza,
+  se non c'è niente salvato, è LINGUA in cima a dettatura.py. Per tornare a quella: cancella la chiave "lingua".
+  Per ogni lingua cambiano INSIEME:
+    - la trascrizione del microfono (lingua e parole suggerite a Whisper);
+    - la voce di Windows (Elsa italiano, Hortense francese, Helena spagnolo, Zira inglese; si cambiano con VOCI_LINGUE
+      in dettatura.py);
+    - i comandi: open/ouvre/abre = apri, close/ferme/cierra = chiudi, search/cherche/busca = cerca, volume up/monte le
+      volume/sube el volumen, move aside/mets-toi de côté/ponte a un lado, ecc. Eva li traduce nei comandi interni
+      (vox_lingue.py: verso_italiano). Una frase che non è un comando resta una chiacchiera nella tua lingua;
+    - le risposte fisse: risposte.json (it), risposte_fr.json, risposte_es.json, risposte_en.json (stessa struttura:
+      puoi modificarle; dopo ogni modifica riavvia Eva);
+    - Groq: risponde nella lingua scelta (messaggio di sistema e istruzioni per gli ordini);
+    - il meteo (parole, nome delle città e frasi), l'ora, la data e il saluto ("Bonjour", "Buenas tardes"...);
+    - le frasi che chiudono Eva (au revoir, adiós, goodbye...).
+  Voci di Windows: servono le voci "Desktop" delle quattro lingue. Se una manca (Eva lo scrive in eva.log e dice
+  "voice not installed"): Impostazioni > Ora e lingua > Lingua e area geografica > Aggiungi una lingua > scegli la
+  lingua > Opzioni lingua > scarica "Sintesi vocale" (e il "Riconoscimento vocale" non serve). Poi riavvia Eva.
+  LIMITI: copia, sposta, taglia, incolla funzionano solo in italiano (le frasi di conferma sono in italiano).
+  I nomi delle cartelle sono quelli di Windows (es. "Documenti"). Le etichette sulla sfera (IN ASCOLTO...) restano in
+  italiano.
+  Nuovi file: vox_lingue.py, risposte_fr.json, risposte_es.json, risposte_en.json.
+
+06/11/2026 (multilingua)
+  - Nuovo vox_lingue.py e tre file di risposte (fr, es, en). Impostazione LINGUA e VOCI_LINGUE in dettatura.py.
+  - Cambio lingua a voce, salvato in impostazioni_eva.json.
+  - vox_voce.py: la voce cambia senza riavviare (cultura it/fr/es/en). vox_core.py: trascrizione nella lingua scelta,
+    traduzione dei comandi, cambio lingua. vox_cervello.py, vox_ia_azioni.py, vox_meteo.py: testi per lingua.
+=====================================================================
+LIBRERIA DEI COMANDI PER IL PC (comandi_pc.py) - 06/11/2026
+=====================================================================
+  Tabella unica, facile da ampliare: ogni comando e' UNA riga C(...) in comandi_pc.py, con azione, frasi in italiano,
+  francese, spagnolo e inglese (varianti naturali comprese) e la frase che Eva dice dopo. Per aggiungerne uno basta
+  copiare una riga e cambiare id, azione e frasi (il file spiega i tipi di azione in cima). 56 comandi, 9 categorie.
+  Prima del confronto Eva toglie "per favore", "puoi", "can you", "peux-tu", "por favor"... davanti e dietro.
+  FINESTRE      ingrandisci / riduci a icona / ripristina / chiudi questa finestra / finestra successiva e precedente /
+                mostra il desktop / affianca a sinistra e a destra
+                (maximize, minimize, restore, close this window, next window, show the desktop, snap left...)
+  PROGRAMMI     apri e chiudi: browser, Esplora file, Blocco note, Calcolatrice, Impostazioni
+  CARTELLE      apri Documenti, Download, Desktop; vai indietro; vai su
+  TESTO         copia, incolla, taglia, seleziona tutto, annulla, ripeti, salva
+  BROWSER       nuova scheda, chiudi scheda, scheda successiva e precedente, ricarica, pagina indietro e avanti
+  SCHERMO/SUONO alza e abbassa il volume, silenzia / riattiva l'audio, schermata (salvata in Immagini\Screenshots)
+  SCORRIMENTO   scorri su, scorri giu, vai all'inizio, vai alla fine
+  SISTEMA       blocca il PC, apri il gestore attivita', annulla lo spegnimento
+  PERICOLOSI    spegni il PC, riavvia, sospendi, esci dall'account, elimina, svuota il cestino
+  REGOLE DI SICUREZZA
+    - Le azioni PERICOLOSE chiedono prima conferma a voce ("Vuoi davvero spegnere il PC? Di si per confermare"): partono
+      solo con un "si" (oui, si, yes, conferma, d'accord, go ahead...). Un "no", un'altra frase o 15 secondi senza
+      risposta = non si fa niente. Spegni e riavvia partono con 20 secondi di margine: "annulla lo spegnimento".
+    - "elimina" / "cancella" da soli premono Canc sull'elemento selezionato (nel Cestino) e SOLO dopo il "si".
+      "cancella <nome di un file>" resta rifiutato come prima (Eva non cancella file per nome).
+    - "chiudi" da solo continua a chiudere Eva (come prima). Per chiudere la finestra attiva dì "chiudi questa finestra".
+    - I tasti vanno sempre alla finestra in primo piano; la finestra di Eva (la sfera) non viene mai toccata.
+    - Mentre Eva aspetta un si/no per copia/sposta, la libreria non interviene.
+  FRASE NON IN TABELLA: va a Groq come prima. Se Groq propone un comando sicuro della tabella ("comando_pc" + id) lo
+  esegue; i comandi pericolosi Groq non li puo' proporre (vengono scartati).
+  LIBRERIE: pyautogui e pywinauto (installate il 06/11/2026 con pip install pyautogui pywinauto; pywin32 e' arrivata
+  con loro), keyboard (c'era gia'), Pillow e psutil (c'erano gia').
+  LIMITI: il livello del volume non si legge (mancano le librerie di Windows per l'audio: i tasti multimediali sono
+  inviati ma non misurati). "chiudi il blocco note / Esplora file" chiude TUTTE le finestre di quel programma.
+  Il Blocco note di Windows 11 riapre le schede della sessione precedente.
+
+06/11/2026 (libreria comandi PC)
+  - Nuovo comandi_pc.py (56 comandi x 4 lingue, ~970 frasi), collegato in vox_core.py (_pc_gestisci, _pc_esegui) e in
+    vox_ia_azioni.py (azione "comando_pc"). Conferma a voce per le azioni pericolose.
+  - vox_voce.py: VOCE_USA_COM = False (l'installazione di pywin32 non deve cambiare il modo in cui Eva parla).
+  - Trovato e corretto nel collaudo un errore mio: comandi_pc cambiava i tipi di argomenti della user32 condivisa e
+    rompeva "chiudi il browser" di azioni.py. Ora usa una copia privata.
+  - Incidente del collaudo: una prova ha sovrascritto eva.log (Blocco note aveva riaperto quel file). Il contenuto
+    precedente di eva.log e' andato perso; il registro riparte da zero. Le altre prove usano solo finestre di prova.
+=====================================================================
+PROMEMORIA A VOCE (promemoria.py) - 06/11/2026
+=====================================================================
+  CREARE   "ricordami di chiamare Jorge alle cinque"  /  "ricordami tra dieci minuti di spegnere il forno"  /
+           "ricordami domani alle nove di comprare il pane"  /  "fammi ricordare che dopo 10 minuti vado..."
+           fr: "rappelle-moi dans dix minutes d'éteindre le four"   es: "recuérdame mañana a las nueve comprar pan"
+           en: "remind me in ten minutes to turn off the oven"
+           Eva capisce COSA e QUANDO, lo ripete a voce ("Va bene: ti ricorderò di chiamare Jorge oggi alle 17.") e lo
+           salva in promemoria.json (accanto al programma: resta anche se spegni il PC).
+           Quando: "tra / fra / dopo N secondi, minuti, ore, giorni", "alle 17:30", "alle cinque e mezza", "domani", "dopodomani",
+           "lunedì", "stasera", "mezzogiorno", "mattina / pomeriggio / sera" (e gli equivalenti in francese, spagnolo, inglese).
+  AVVISO   All'ora giusta Eva dice "<nome>, ti ricordo di chiamare Jorge", mostra la frase sulla sfera e la tiene qualche
+           secondo. Il nome è quello che hai scritto nella schermata iniziale (si cambia con cambia_nome_e_chiave.bat). Se Eva era spenta, avvisa appena
+           si riaccende ("avevi un promemoria oggi alle 15 e 8: ti ricordo..."). Non interrompe una dettatura (F9), una
+           frase di Eva o una domanda in corso: aspetta di essere libera.
+  CHIEDE   Se non capisce l'ora o il giorno, chiede invece di indovinare: "Quando devo ricordartelo?", "Cosa devo
+           ricordarti?", "Alle 5: del mattino o del pomeriggio?" (solo se tutte e due le ore sono ancora future),
+           "Le 14:00 di oggi sono già passate. Intendi domani?". Dopo due risposte incomprensibili lascia perdere.
+  ELENCO   "che promemoria ho?" (fr: quels rappels ai-je ? / es: qué recordatorios tengo / en: what reminders do I have?)
+  CANCELLA "cancella il promemoria" (supprime le rappel / borra el recordatorio / delete the reminder). Se ce n'è più di
+           uno chiede quale (il numero, "il primo", una parola del promemoria o "tutti"); chiede SEMPRE conferma a voce
+           ("Dì sì per confermare") prima di toglierlo.
+  FILE     promemoria.json (elenco con id, cosa, quando, lingua). Si può aprire e controllare a mano.
+  LIMITI   Date come "il 15 novembre" non sono ancora capite (Eva chiede quando). "Alle cinque" senza giorno, se sono le
+           14:30, vale le 17:00 (l'unica ora futura) e lo dice nella conferma.
+
+06/11/2026 (promemoria)
+  - Nuovo promemoria.py (riconoscimento in 4 lingue, archivio, frasi) collegato in vox_core.py (_pr_gestisci, _pr_tick,
+    _pr_annuncia): controllo ogni secondo nel ciclo di ascolto. dettatura.py e vox_lingue.py: parole suggerite a Whisper.
+=====================================================================
+MEMORIA DELLA CONVERSAZIONE (memoria.py) - 06/11/2026
+=====================================================================
+  Eva ricorda gli ultimi scambi (domanda, risposta, tipo) e capisce le frasi che si riferiscono alla precedente:
+    dopo il METEO     "e domani?"  "e a Roma?"  "e Roma domani?"   (si risolvono in locale, senza Groq: veloci)
+                      fr "et demain ?"  es "¿y mañana?"  en "and tomorrow?" / "what about Paris?"
+    "ripeti"          ripete l'ultima risposta (ripetilo, puoi ripetere / répète / repite / repeat)
+    "dillo più piano" la ripete più lentamente (dis-le plus lentement / dilo más despacio / say it more slowly)
+    "dimmi di più"    va a Groq con gli ultimi scambi (tell me more / dime más / dis-m'en plus); anche "perché?", "e poi?"
+    una domanda libera ("quanto è alta?") dopo una chiacchierata: Groq riceve gli ultimi scambi e capisce "essa".
+  I comandi semplici (apri, chiudi, promemoria, finestre...) restano locali e veloci. Se "e domani?" arriva dopo uno di
+  questi, o all'inizio, Eva NON indovina: chiede "Di che cosa stiamo parlando?".
+  "dimentica tutto" / "ricominciamo" (oublie tout / olvida todo / forget everything): svuota la memoria e lo conferma a voce.
+  SOLO IN RAM: niente viene salvato su disco. La memoria si svuota quando Eva si spegne, quando cambi lingua, dopo
+  15 minuti di silenzio e con "dimentica tutto". Tiene gli ultimi 8 scambi e a Groq ne manda al massimo 5 (e al massimo
+  1200 caratteri in tutto, ogni messaggio accorciato): misurato, la risposta non rallenta.
+  ATTENZIONE: eva.log (il registro di funzionamento, che c'era già) continua a scrivere le frasi riconosciute e le risposte
+  dette. "Dimentica tutto" svuota la memoria di Eva, NON il registro.
+
+06/11/2026 (memoria)
+  - Nuovo memoria.py, collegato in vox_core.py (_mem_gestisci, _parla, _chat_streaming, _meteo) e vox_cervello.py (la
+    cronologia per Groq ora viene da memoria.py). vox_voce.py: velocità per singola frase (per "dillo più piano").
+=====================================================================
+"COSA SAI FARE?" - AIUTO A VOCE (aiuto.py) - 06/11/2026
+=====================================================================
+  "cosa sai fare?" / "aiuto" / "quali comandi hai?" / "a cosa servi?"  (fr: que sais-tu faire ? / es: ¿qué puedes hacer? /
+  en: what can you do?)  ->  Eva dice un RIEPILOGO BREVE dei gruppi (circa 20 secondi, non l'elenco completo) e lo mostra
+  sulla sfera: finestre e programmi, cartelle, testo e browser, volume, promemoria, domande e conversazione, cambio lingua.
+  Poi chiede "vuoi sentire i dettagli di un gruppo?". Dì il nome di un gruppo ("promemoria", "finestre", "volume"...) e Eva
+  legge 3-4 esempi di frasi, poi chiede se vuoi un altro gruppo. "No" per finire. "Ripeti" ripete l'ultima cosa detta.
+  I comandi pericolosi (spegni, riavvia, sospendi, esci, elimina, svuota il cestino) NON vengono elencati: Eva dice solo
+  che chiedono sempre conferma a voce. Parla nella lingua scelta in quel momento.
+  SEMPRE AGGIORNATO: riepilogo ed esempi sono generati dalla libreria dei comandi (comandi_pc.py). Aggiungi un comando
+  alla tabella e l'aiuto lo sa. Una CATEGORIA NUOVA della tabella diventa un gruppo nuovo (nome: la categoria; per tradurlo
+  aggiungilo a NOMI_CATEGORIE in aiuto.py). Gli esempi dei gruppi che non stanno nella tabella (promemoria, domande e
+  conversazione, cambio lingua) sono in ESEMPI, accanto alle funzioni: promemoria.py, memoria.py, vox_lingue.py.
+
+06/11/2026 (aiuto)
+  - Nuovo aiuto.py collegato in vox_core.py (_aiuto_gestisci). comandi_pc.py: ogni comando conserva le frasi com'erano
+    scritte (raw), per leggerle bene a voce. Sostituisce la vecchia risposta fissa "aiuto" di risposte.json (75 parole).
+
+=== Eva sparisce dopo un comando (6 nov 2026) ===
+- Dopo un comando che apre o cambia qualcosa (apri programma/cartella/sito, cerca, cambia finestra, volume...) Eva sparisce SUBITO
+  del tutto, anche dal benvenuto a schermo intero, e torna a riposo: si richiama con «Eva» o con F9.
+- Dopo una semplice risposta (meteo, domanda) resta visibile mentre risponde e sparisce dopo SECONDI_PRIMA_DI_SPARIRE (5 s).
+  Dopo «Eva» da sola, se non dici niente, sparisce dopo ~10 s.
+- La X sulla sfera spegne Eva; durante il benvenuto a schermo intero serve il DOPPIO CLIC (un clic solo non la chiude).
+- Impostazioni in dettatura.py: SPARISCI_DOPO_COMANDO (False = comportamento di prima), SECONDI_PRIMA_DI_SPARIRE.

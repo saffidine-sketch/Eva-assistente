@@ -1,0 +1,13 @@
+groq
+faster-whisper
+sounddevice
+numpy
+PySide6
+Pillow
+keyboard
+psutil
+pyautogui
+pywinauto
+pywin32
+comtypes
+pycaw

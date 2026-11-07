@@ -1,0 +1,17 @@
+# Dati personali e file che Eva crea da sola: non vanno mai pubblicati
+*.log
+eva_log.txt
+non_trovati.txt
+indice_cartelle.json
+impostazioni_eva.json
+promemoria.json
+chiusura_volontaria.flag
+backup/
+backup_*/
+documentazione/
+*.docx
+__pycache__/
+*.pyc
+*.lnk
+*.bak
+.env

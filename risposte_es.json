@@ -1,0 +1,190 @@
+{
+  "_aiuto": [
+    "Versione SPAGNOLA di risposte.json (stessa struttura). Puoi modificarla. Dopo ogni modifica riavvia Eva.",
+    "'frasi' = cosa puoi dire. 'risposte' = cosa risponde. Segnaposto: {nome}, {ora}, {data}, {saluto_ora}."
+  ],
+
+  "utente": "amigo",
+
+  "intenti": [
+    {
+      "nome": "saluto",
+      "frasi": ["hola", "hola eva", "buenos dias", "buenas tardes", "buenas noches eva", "buenas", "que tal", "hey", "saludos"],
+      "risposte": ["¡{saluto_ora}, {nome}! ¿Cómo estás?", "{saluto_ora}, {nome}. Dime.",
+                   "¡{saluto_ora}! ¿En qué puedo ayudarte, {nome}?"],
+      "continua": true
+    },
+    {
+      "nome": "buonanotte",
+      "frasi": ["buenas noches", "buena noche", "me voy a dormir", "me voy a la cama"],
+      "risposte": ["¡Buenas noches, {nome}! Hasta mañana.", "Duerme bien, {nome}. ¡Buenas noches!",
+                   "¡Dulces sueños, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "mi_senti",
+      "frasi": ["me oyes", "me escuchas", "me oyes eva", "estas ahi", "estas ahi eva", "estas escuchando",
+                "estas despierta", "me entiendes", "eva me oyes"],
+      "risposte": ["Te oigo perfectamente, {nome}.", "Sí {nome}, te oigo fuerte y claro.",
+                   "Claro, estoy aquí y te escucho."],
+      "continua": true
+    },
+    {
+      "nome": "come_stai",
+      "frasi": ["como estas", "como estas hoy", "como va", "que tal estas", "todo bien", "como te sientes"],
+      "risposte": ["Estoy bien, ¡gracias! ¿Y tú?", "Muy bien, ¡gracias {nome}! ¿Y tú cómo estás?",
+                   "Todo en orden, ¡gracias! ¿Y tú?"],
+      "continua": true
+    },
+    {
+      "nome": "sto_bene",
+      "frasi": ["bien", "estoy bien", "muy bien", "genial", "estoy muy bien", "todo bien gracias", "bien gracias",
+                "no esta mal", "todo ok"],
+      "risposte": ["Me alegro, {nome}.", "¡Qué buena noticia, {nome}!", "Me alegra mucho, {nome}."],
+      "continua": true
+    },
+    {
+      "nome": "sto_male",
+      "frasi": ["mal", "estoy mal", "no estoy bien", "estoy cansado", "estoy cansada", "estoy triste", "asi asi", "regular"],
+      "risposte": ["Lo siento, {nome}. Espero que te sientas mejor pronto.",
+                   "Ánimo {nome}, ¿puedo hacer algo por ti?"],
+      "continua": true
+    },
+    {
+      "nome": "grazie",
+      "frasi": ["gracias", "muchas gracias", "mil gracias", "te lo agradezco", "te doy las gracias",
+                "bravo", "buen trabajo", "excelente trabajo", "eres genial", "eres muy buena"],
+      "risposte": ["¡De nada, {nome}!", "¡No hay de qué, {nome}!", "Faltaría más, {nome}.", "¡Con gusto!"]
+    },
+    {
+      "nome": "nome",
+      "frasi": ["como te llamas", "cual es tu nombre", "quien eres", "como te llaman", "dime tu nombre", "tu quien eres"],
+      "risposte": ["Soy Eva, tu asistente de voz.", "Me llamo Eva, tu asistente de voz.",
+                   "Soy Eva, ¡encantada {nome}!"]
+    },
+    {
+      "nome": "ora",
+      "frasi": ["que hora es", "que horas son", "sabes que hora es", "dime la hora", "tienes hora", "me dices la hora"],
+      "risposte": ["{ora}.", "{ora}, {nome}.", "Miro el reloj. {ora}."]
+    },
+    {
+      "nome": "data",
+      "frasi": ["que dia es hoy", "que dia es", "cual es la fecha", "que fecha es hoy", "dime la fecha",
+                "a cuantos estamos", "en que dia estamos"],
+      "risposte": ["Hoy es {data}.", "Hoy es {data}, {nome}.", "Estamos a {data}."]
+    },
+    {
+      "nome": "aiuto",
+      "frasi": ["que sabes hacer", "que puedes hacer", "ayuda", "ayudame", "como puedes ayudarme",
+                "que comandos conoces", "cuales son los comandos", "para que sirves"],
+      "risposte": ["Puedo abrir programas, sitios web, carpetas y archivos, buscar en Google y en YouTube, subir y bajar el volumen y preparar borradores de correo. También puedo copiar y mover archivos y carpetas, por ejemplo al pendrive, pero siempre con tu confirmación: nunca sobrescribo ni borro nada. Por ejemplo, di: abre Chrome, o copia facturas al pendrive. Si la esfera te molesta, di apártate, o escóndete. Di cierra cuando hayas terminado.",
+                   "Esto es lo que sé hacer, {nome}: abrir programas, sitios web, carpetas y archivos, buscar en Google, regular el volumen y preparar borradores de correo. Copio y muevo archivos con tu confirmación, pero nunca borro nada. Y además charlamos un rato.",
+                   "Abro programas, sitios, carpetas y archivos, busco en Google, regulo el volumen y preparo borradores de correo. Copio y muevo archivos solo con tu confirmación, y nunca borro nada. No envío nunca nada, {nome}: el borrador lo revisas tú."]
+    },
+    {
+      "nome": "arrivederci",
+      "soglia": 0.8,
+      "frasi": ["cierra", "cierrate", "cierra eva", "vete", "eso es todo", "he terminado", "ya termine", "adios",
+                "hasta luego", "hasta pronto", "hasta la vista", "nos vemos", "puedes irte", "descansa",
+                "buen dia", "chao", "basta", "para"],
+      "risposte": ["Hasta luego, {nome}.", "¡Adiós, {nome}!", "¡Chao {nome}, hasta pronto!", "¡Hablamos, {nome}!"],
+      "azione": "chiudi"
+    },
+    {
+      "nome": "zitta",
+      "frasi": ["callate", "silencio", "no hables", "deja de hablar", "quedate callada", "cierra la boca"],
+      "risposte": ["De acuerdo, {nome}. Ya no hablo más. Di «habla» para reactivarme."],
+      "azione": "voce_off"
+    },
+    {
+      "nome": "parla",
+      "frasi": ["habla", "vuelve a hablar", "puedes hablar", "habla otra vez", "habla ya", "activa la voz"],
+      "risposte": ["¡Aquí estoy de nuevo, {nome}!", "Está bien, {nome}, vuelvo a hablar."],
+      "azione": "voce_on"
+    }
+  ],
+
+  "fisse": {
+    "timeout": ["Vuelvo a descansar, llámame cuando quieras."],
+    "chiudi_programmi": ["Todavía no sé cerrar programas, {nome}."],
+
+    "cartella_ok": ["Abro la carpeta {cosa}.", "He abierto la carpeta {cosa}.", "Aquí está la carpeta {cosa}."],
+    "file_ok": ["Archivo {cosa} abierto.", "Abro el archivo {cosa}.", "Aquí está el archivo {cosa}."],
+    "cartella_non_trovata": ["He entendido: abre la carpeta {cosa}. No la he encontrado."],
+    "file_non_trovato": ["He entendido: abre el archivo {cosa}. No lo he encontrado."],
+    "oggetto_non_trovato": ["He entendido: abre {cosa}. No lo he encontrado."],
+    "non_trovato_capito": ["He entendido: {capito}. No lo he encontrado."],
+    "non_trovato_multi": ["No he encontrado nada, {nome}."],
+    "cartella_ok_parziale": ["Abro {cosa}. Si no es esta, dímelo."],
+    "file_ok_parziale": ["Abro el archivo {cosa}. Si no es este, dímelo."],
+    "azione_vietata": ["Eso no lo hago, {nome}: puedo abrir, y copiar o mover con tu confirmación."],
+    "spegni": ["Apago Eva. Hasta pronto, {nome}."],
+    "vista_ridotta": ["Me aparto.", "Aquí estoy, a un lado."],
+    "vista_grande": ["Aquí estoy.", "Aquí estoy, en el centro."],
+    "vista_nascosta": ["Me escondo, pero te escucho."],
+    "vista_angolo": ["Me muevo {dove}.", "De acuerdo, {dove}."],
+    "op_annullato": ["Cancelado."],
+    "op_cancella": ["Por seguridad no borro, {nome}. Hazlo tú a mano."],
+    "op_spente": ["Las operaciones con archivos están desactivadas."],
+    "op_sola_lettura": ["Modo solo lectura activado, {nome}. No copio ni muevo nada."],
+    "op_normale": ["Modo normal, {nome}. Puedo volver a copiar y mover, siempre con tu confirmación."],
+    "op_occupata": ["Todavía estoy trabajando en otra operación, {nome}. Espera a que termine."],
+    "op_fermo": ["Detengo la copia, {nome}."],
+    "op_protetta": ["Esta carpeta está protegida, {nome}."],
+    "op_nessuna_chiavetta": ["No veo ningún pendrive conectado, {nome}."],
+    "op_non_trovato": ["No he encontrado {cosa}, {nome}."],
+    "op_incerto": ["No estoy segura de cuál quieres, {nome}. No hago nada."],
+    "op_dest_non_trovata": ["No he encontrado la carpeta {cosa}, {nome}."],
+    "op_nessuna_cartella": ["No tengo ninguna carpeta abierta, {nome}. Dime en qué carpeta."],
+    "op_dentro_se_stessa": ["No puedo meterla dentro de sí misma, {nome}."],
+    "op_gia_li": ["Ya está en esa carpeta, {nome}."],
+    "op_spazio": ["No hay espacio suficiente en el destino, {nome}: hacen falta {serve} y quedan {resta}."],
+    "op_avvio": ["De acuerdo, {verbo}."],
+    "op_copiato": ["{cosa} copiado."],
+    "op_tagliato": ["{cosa} cortado. No se mueve hasta que digas pega, y te lo pregunto otra vez."],
+    "op_appunti_vuoti": ["No tengo nada que pegar, {nome}."],
+    "op_appunti_spariti": ["El elemento que había copiado ya no está, {nome}."],
+    "op_non_capito": ["No he entendido qué {verbo}, {nome}."],
+    "op_verbo_iniziale": ["Para copiar o mover empieza con el verbo, {nome}: por ejemplo, copia documentos de Katia al pendrive."],
+    "non_trovato_generico": ["No consigo abrirlo, {nome}."],
+    "programmi_vietati": ["Por seguridad no abro programas desde archivos, {nome}."],
+    "nessuna_cartella_aperta": ["Todavía no he abierto ninguna carpeta, {nome}."],
+    "nessuna_precedente": ["No hay una carpeta anterior, {nome}."],
+    "gia_in_alto": ["Ya estamos en la carpeta más alta, {nome}."],
+    "annullato": ["De acuerdo, {nome}."],
+    "indice_aggiorno": ["Actualizo el índice, {nome}."],
+    "indice_in_preparazione": ["Todavía estoy preparando el índice de carpetas, {nome}. Inténtalo de nuevo en un momento."],
+    "alias_ok": ["Hecho, {nome}. Ahora «{alias}» es la carpeta {cosa}."],
+    "alias_no": ["No he entendido qué carpeta quieres decir, {nome}."],
+    "multi_ok": ["Abro {elenco}.", "He abierto {elenco}."],
+    "multi_parziale": ["He abierto {elenco}, pero no he encontrado {mancanti}, {nome}."]
+  },
+
+  "non_so": [
+    "Eso todavía no sé hacerlo, {nome}, pero puedo abrir programas, buscar en Google y más. Di «ayuda» para ver la lista.",
+    "Todavía no sé ayudarte con eso. Puedo abrir programas, sitios y carpetas, buscar en Google y regular el volumen. Di «ayuda» para saberlo todo.",
+    "Todavía no sé hacerlo, {nome}. Prueba con un comando, por ejemplo «abre Chrome», o di «ayuda»."
+  ],
+
+  "vox_da_solo": ["Dime, {nome}.", "¿Sí, {nome}?", "Te escucho, {nome}.", "Aquí estoy, {nome}."],
+
+  "conferme": {
+    "apri": ["Abro {cosa}.", "He abierto {cosa}.", "Aquí está {cosa}.", "{cosa}, enseguida."],
+    "volume_su": ["Volumen subido.", "He subido el volumen."],
+    "volume_giu": ["Volumen bajado.", "He bajado el volumen."],
+    "volume_livello": ["Volumen al {livello} por ciento."],
+    "muto": ["Audio desactivado."],
+    "togli_muto": ["Audio reactivado."],
+    "cerca": ["Busco {cosa}.", "Aquí están los resultados de {cosa}."],
+    "mail": ["He preparado el borrador, {nome}. No lo he enviado: revísalo tú."],
+    "impara": ["Hecho, ya lo he aprendido."],
+    "altro": ["Hecho, {nome}.", "Hecho."]
+  },
+
+  "errori": {
+    "non_trovato": ["No he encontrado eso, {nome}."],
+    "non_capito": ["No he entendido, ¿puedes repetir?"],
+    "incerto": ["No estoy segura. Quizá querías decir: {cosa}. ¿Puedes repetir?"],
+    "errore": ["Perdona {nome}, ha habido un problema."]
+  }
+}

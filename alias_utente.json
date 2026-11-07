@@ -1,0 +1,3 @@
+{
+  "_come_si_usa": "A sinistra il nome come lo dici, a destra l'app che deve aprire (un nome che il programma gia' conosce, per esempio outlook). Puoi aggiungere righe a mano oppure dire a voce: impara <nome> e <app>. Si legge a ogni avvio. Le chiavi che iniziano con _ vengono ignorate."
+}
