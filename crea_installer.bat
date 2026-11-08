@@ -1,5 +1,5 @@
 @echo off
-rem Costruisce l'installer di Eva: installer_output\Eva_Setup_2.1.exe
+rem Costruisce l'installer di Eva: installer_output\Eva_Setup_2.2.exe
 rem Serve (solo su questo PC, non per chi installa): Python con le librerie di requirements.txt,
 rem pip install pyinstaller, e Inno Setup 6 (winget install JRSoftware.InnoSetup).
 cd /d "%~dp0"
@@ -28,7 +28,7 @@ if not exist "%ISCC%" (
 if errorlevel 1 goto errore
 
 echo.
-echo Fatto: installer_output\Eva_Setup_2.1.exe
+echo Fatto: installer_output\Eva_Setup_2.2.exe
 pause
 
 exit /b 0

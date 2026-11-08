@@ -1,10 +1,25 @@
-# Eva 2.1
+# Eva 2.2
 
 Eva è un'assistente vocale per Windows: la senti parlare, ti risponde a voce, apre programmi e cartelle,
 cerca sul web, gestisce il volume, prepara bozze di mail, dice il meteo e fa due chiacchiere.
 Ha una sfera animata sullo schermo e parla in italiano, francese, spagnolo e inglese.
 
 Eva è un regalo gratuito e usa **solo Groq**, che ha un piano gratuito (vedi sotto).
+
+**Senza installare Python:** scarica `Eva_Setup_2.2.exe` dalla pagina delle *Releases* e avvialo. Al primo avvio serve
+internet (modelli vocali e chiave di Groq).
+
+## Novità della 2.2: le utilità (solo in italiano)
+
+- **ora e data** a voce, anche con parole in più prima di "Eva" ("che ora sono", "che giorno è domani");
+- **timer, cronometro e sveglia** ("imposta un timer di dieci minuti", "svegliami alle sette");
+- **appunti** salvati e letti a voce ("prendi nota comprare il latte", "leggimi gli appunti");
+- **calcoli** fatti in locale ("quanto fa dodici per otto", "il 15 per cento di 200");
+- **batteria, musica, luminosità, Wi-Fi e Bluetooth** ("quanta batteria ho", "metti in pausa la musica",
+  "alza la luminosità", "accendi il Bluetooth"; il Wi-Fi si spegne solo dopo la tua conferma).
+
+I tuoi dati personali (`rubrica.json`, `alias_utente.json`, `correzioni.json`, `appunti.json`, `promemoria.json`) non sono
+nel repository: al primo avvio Eva crea i suoi file dagli `*.esempio.json`.
 
 ## Novità della 2.1: la modalità compagna
 

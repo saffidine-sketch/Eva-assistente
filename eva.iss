@@ -1,6 +1,6 @@
 ; Installer di Eva (Inno Setup 6). Si costruisce con crea_installer.bat
 #define NomeApp "Eva"
-#define Versione "2.1"
+#define Versione "2.2"
 
 [Setup]
 AppId={{8F3A6C52-1B7D-4E39-A5C4-2D9E7B10F6A1}

@@ -1,4 +1,4 @@
-EVA - LEGGIMI (versione 2.1)
+EVA - LEGGIMI (versione 2.2)
 ============================
 Per installare Eva e creare la chiave gratuita di Groq vedi README.md.
 Assistente vocale per Windows. Per i dettagli su copia e sposta guarda anche aiuto_eva.txt.

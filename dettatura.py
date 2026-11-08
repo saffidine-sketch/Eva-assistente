@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 
 import eva_percorsi as percorsi
-VERSIONE = "2.1"             # versione di Eva (si scrive in eva_log.txt a ogni avvio)
+VERSIONE = "2.2"           # versione di Eva (si scrive in eva_log.txt a ogni avvio)
 
 T0 = time.perf_counter()      # per misurare i tempi di avvio (scritti in eva.log come "TEMPO avvio")
 
