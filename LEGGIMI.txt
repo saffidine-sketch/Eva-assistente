@@ -34,6 +34,8 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
     vox_cervello.py       Risposte, chiacchiere, riconoscimento di "chiudi", frasi per Groq (chat).
     vox_ia_azioni.py      Groq che traduce un ordine in un'azione (apri, chiudi...) che il codice esegue.
     vox_meteo.py          Il meteo (Open-Meteo) e la città predefinita.
+    utilita.py            Timer, cronometro, sveglia, appunti, calcoli, batteria, musica, luminosità, Wi-Fi, Bluetooth.
+    utilita_pc.py         La parte che parla con Windows (lettore multimediale, luminosità, radio Wi-Fi e Bluetooth).
     vox_inizio.py         La schermata iniziale: il tuo nome e la chiave gratuita di Groq (la chiave non va in nessun file).
     comandi.py            Normalizza le frasi (maiuscole, accenti, parole simili).
     azioni.py             Esegue i comandi: apri, chiudi finestra, cerca, volume, bozze di mail.
@@ -52,6 +54,8 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
     correzioni.json       Correzioni di parole sentite male dal riconoscimento vocale.
     alias_utente.json     I tuoi nomi per programmi e cartelle ("impara").
     rubrica.json          Contatti per le mail.
+    appunti.json          I tuoi appunti ("prendi nota ..."). Dati personali: non va mai pubblicato.
+    promemoria.json       Promemoria, timer e sveglie ancora da annunciare (si crea da solo).
     impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo).
     indice_cartelle.json  Indice delle tue cartelle e file (si aggiorna da solo).
     non_trovati.txt       Cose chieste e non trovate.
@@ -79,6 +83,18 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
   File:     copia / sposta / taglia / incolla ... (vedi l'elenco sopra: sempre con conferma a voce)
   Voce:     stai zitta / parla
   Chiacchiere: come stai, che ore sono, che giorno è, grazie... e qualsiasi domanda libera (risponde Groq)
+  UTILITÀ (solo in italiano; funzionano anche senza internet):
+    Timer:      imposta un timer di dieci minuti / quanto manca al timer / annulla il timer   (al massimo 24 ore)
+    Cronometro: avvia il cronometro / quanto segna il cronometro / ferma il cronometro / azzera il cronometro
+    Sveglia:    svegliami alle sette / metti una sveglia domani alle 6 e 30 / che sveglie ho / cancella la sveglia
+                (è un promemoria: suona anche se Eva era spenta all'ora giusta, appena la riaccendi)
+    Appunti:    prendi nota comprare il latte / leggimi gli appunti / leggi l'ultimo appunto / cancella gli appunti (chiede conferma)
+    Calcoli:    quanto fa dodici per otto / il 15 per cento di 200 / radice quadrata di 81 / metà di 50 / 2 elevato alla 10
+    Batteria:   quanta batteria ho / il PC è in carica   (un PC fisso risponde che non ha la batteria)
+    Musica:     metti in pausa la musica / riprendi la musica / canzone successiva / brano precedente / che canzone è
+                (comanda il lettore che Windows considera attivo: Spotify, YouTube nel browser, Media Player...)
+    Luminosità: alza / abbassa la luminosità / luminosità al 50 / luminosità al massimo   (laptop o monitor con DDC/CI)
+    Wi-Fi e Bluetooth: accendi / spegni il Bluetooth / è acceso il Wi-Fi / spegni il Wi-Fi (chiede prima conferma)
   Aiuto:    "Eva, cosa sai fare?" oppure "aiuto"
 
 4) COME PARTE ALL'ACCENSIONE E COME LAVORA LA GUARDIA
@@ -327,3 +343,13 @@ MEMORIA DELLA CONVERSAZIONE (memoria.py) - 06/11/2026
   Dopo «Eva» da sola, se non dici niente, sparisce dopo ~10 s.
 - La X sulla sfera spegne Eva; durante il benvenuto a schermo intero serve il DOPPIO CLIC (un clic solo non la chiude).
 - Impostazioni in dettatura.py: SPARISCI_DOPO_COMANDO (False = comportamento di prima), SECONDI_PRIMA_DI_SPARIRE.
+
+08/11/2026 (ora, data e utilità)
+  - Ora e data: riconoscimento per parole chiave (regge "che ora sono", "chi ora sono" e le parole prima di "Eva"); "che giorno è
+    domani / ieri / dopodomani" risponde con la data giusta; "a che ora è la riunione" e "che giorno è il 5 maggio" non ricevono più
+    l'ora o la data di adesso. (vox_cervello.py, risposte.json)
+  - Nuovi utilita.py e utilita_pc.py: timer, cronometro, sveglia (appoggiata ai promemoria, campo "tipo"), appunti (appunti.json),
+    calcoli senza eval, batteria, musica, luminosità, Wi-Fi e Bluetooth. Solo italiano. Wi-Fi spento solo dopo conferma a voce.
+  - promemoria.py: aggiungi(..., tipo=), risolvi() sceglie la mattina per le sveglie. vox_core.py: _ut_gestisci, annuncio di timer e sveglie.
+  - memoria.py: "è acceso il wifi?" non è più preso per "e a Roma?".
+  - aiuto.py: nuovo gruppo "timer, appunti e utilità del PC" (solo italiano). Installer: crea_installer.bat usa i file *.esempio.json.

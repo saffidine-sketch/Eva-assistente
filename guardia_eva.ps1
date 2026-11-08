@@ -1,7 +1,10 @@
 # Guardia di Eva: da mettere nell'avvio automatico di Windows (lo fa eva_avvio_automatico.ps1 attiva).
 # Aspetta rete e audio, controlla se Eva e' in esecuzione, la riavvia se no, e scrive tutto in guardia_eva.log.
 $qui = Split-Path -Parent $MyInvocation.MyCommand.Path
-$log = Join-Path $qui 'guardia_eva.log'
+$exe = Join-Path $qui 'Eva.exe'
+$dati = if (Test-Path $exe) { Join-Path $env:APPDATA 'Eva' } else { $qui }   # installata: i dati stanno in %APPDATA%\Eva
+if (-not (Test-Path $dati)) { New-Item -ItemType Directory -Path $dati -Force | Out-Null }
+$log = Join-Path $dati 'guardia_eva.log'
 $porta = 47625   # la stessa di dettatura.py (PORTA_ISTANZA_UNICA)
 
 function Scrivi($m) { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m) -Encoding UTF8 }
@@ -11,7 +14,7 @@ function EvaAttiva {
 
 Scrivi 'Guardia avviata.'
 # Chiusura volontaria (pulsante X sulla sfera): non riavvio Eva e cancello il segnale, cosi' al prossimo avvio riparte tutto normale.
-$flag = Join-Path $qui 'chiusura_volontaria.flag'
+$flag = Join-Path $dati 'chiusura_volontaria.flag'
 function ChiusaDaUtente {
     if (Test-Path $flag) {
         Remove-Item $flag -Force -ErrorAction SilentlyContinue
@@ -21,8 +24,14 @@ function ChiusaDaUtente {
     return $false
 }
 if (ChiusaDaUtente) { exit 0 }
-$pyw = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\pythonw.exe'
-if (-not (Test-Path $pyw)) { $pyw = (Get-Command pythonw -ErrorAction SilentlyContinue).Source }
+if (Test-Path $exe) {
+    $pyw = $exe
+    $argEva = $null
+} else {
+    $pyw = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\pythonw.exe'
+    if (-not (Test-Path $pyw)) { $pyw = (Get-Command pythonw -ErrorAction SilentlyContinue).Source }
+    $argEva = '"' + (Join-Path $qui 'dettatura.py') + '"'
+}
 if (-not $pyw) { Scrivi 'ERRORE: pythonw non trovato.'; exit 1 }
 
 # 1) aspetto la rete (max 2 minuti) e il servizio audio (max 2 minuti)
@@ -50,7 +59,8 @@ for ($t = 1; $t -le 3; $t++) {
     if ($attiva) { Scrivi "Eva in esecuzione (controllo $t, dopo $($s * 2) s): OK."; break }
     if (ChiusaDaUtente) { exit 0 }
     Scrivi "Eva NON in esecuzione: la riavvio (tentativo $t)."
-    Start-Process -FilePath $pyw -ArgumentList ('"' + (Join-Path $qui 'dettatura.py') + '"') -WorkingDirectory $qui
+    if ($argEva) { Start-Process -FilePath $pyw -ArgumentList $argEva -WorkingDirectory $qui }
+    else { Start-Process -FilePath $pyw -WorkingDirectory $qui }
 }
 for ($s = 0; $s -lt 15 -and -not (EvaAttiva); $s++) { Start-Sleep 2 }
 Scrivi ("Esito finale: Eva " + $(if (EvaAttiva) { 'ATTIVA' } else { 'NON ATTIVA: guarda eva.log' }))

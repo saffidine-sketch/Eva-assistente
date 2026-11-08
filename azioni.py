@@ -22,6 +22,7 @@ import time
 import unicodedata
 from collections import namedtuple
 from pathlib import Path
+import eva_percorsi as percorsi
 from urllib.parse import quote, urlencode
 
 import comandi
@@ -33,7 +34,7 @@ from comandi import (MARGINE_PARI, SOGLIA_INCERTA, SOGLIA_SICURA, Risultato,
 # ======================================================================
 MAIL_PREDEFINITA = "gmail"     # "gmail" = Gmail nel browser, "posta" = app Posta (mailto:)
 PASSO_VOLUME = 10              # di quanto cambia "alza/abbassa il volume" (in %)
-FILE_RUBRICA = Path(__file__).with_name("rubrica.json")
+FILE_RUBRICA = percorsi.dati("rubrica.json")
 
 # Parole che si possono togliere dalla frase senza cambiarne il senso
 RIEMPITIVI = {"per", "favore", "grazie", "adesso", "ora", "subito", "po"}

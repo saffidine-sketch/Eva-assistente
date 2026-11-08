@@ -189,7 +189,8 @@ def _alt(lg):
 
 _NON_LUOGHI = {
     "it": {"tu", "lei", "voi", "te", "me", "io", "poi", "quindi", "allora", "dopo", "ora", "adesso", "anche", "ancora", "come",
-           "cosa", "perche", "quando", "dove", "chi", "quanto", "questo", "quello", "altro", "altra", "no", "si"},
+           "cosa", "perche", "quando", "dove", "chi", "quanto", "questo", "quello", "altro", "altra", "no", "si",
+           "acceso", "accesa", "spento", "spenta", "attivo", "attiva", "connesso", "collegato", "carica", "scarica", "pieno"},
     "fr": {"toi", "vous", "moi", "puis", "alors", "ensuite", "apres", "maintenant", "aussi", "encore", "comment", "quoi",
            "pourquoi", "quand", "ou", "qui", "combien", "ca", "ceci", "non", "oui"},
     "es": {"tu", "usted", "vos", "yo", "luego", "entonces", "despues", "ahora", "tambien", "todavia", "como", "que",
@@ -274,6 +275,8 @@ def riconosci(frase):
     for tipo in ("dimentica", "ripeti", "piano", "di_piu", "chiarimento"):
         if re.fullmatch(P[tipo], pulita):
             return tipo, {"giorno": None, "luogo": None}
+    if lg == "it" and re.match(r"\s*[èÈ]", frase):
+        return None                                  # "è acceso il wifi?": «è» (verbo) non è la «e» di "e domani?"
     giorni = _alt(lg)
     m = re.fullmatch(P["e_giorno"].format(giorni=giorni), f)
     if m:

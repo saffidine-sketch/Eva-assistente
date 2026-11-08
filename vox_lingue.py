@@ -16,13 +16,15 @@ Questo modulo NON apre, non scrive e non cancella niente (a parte la chiave "lin
 Copia, sposta, taglia e incolla restano disponibili solo in italiano.
 """
 import datetime
+import difflib
 import json
 import logging
 import re
 import unicodedata
 from pathlib import Path
 
-FILE_IMPOSTAZIONI = Path(__file__).with_name("impostazioni_eva.json")
+import eva_percorsi as percorsi
+FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 _log = logging.getLogger("eva")
 
 CODICI = ("it", "fr", "es", "en")
@@ -463,6 +465,15 @@ _SALTA = {"eva", "vox", "per", "favore", "please", "por", "favor", "s", "il", "t
           "con", "avec", "dans"}
 
 
+def _e_nome_lingua(tok, nomi):
+    """Il nome della lingua, anche se Whisper lo sente un po' storpiato ("spaniolo" per "spagnolo")."""
+    if tok in nomi:
+        return True
+    if len(tok) < 6:
+        return False
+    return bool(difflib.get_close_matches(tok, nomi, n=1, cutoff=0.82))
+
+
 def riconosci_cambio(testo):
     """"Eva, parla francese" / "speak English" / "habla español" / "parle italien" / "cambia lingua in spagnolo".
     Restituisce il codice della lingua (it, fr, es, en) oppure None."""
@@ -471,12 +482,13 @@ def riconosci_cambio(testo):
         return None
     for codice, nomi in _NOMI_LINGUA.items():
         for j, tok in enumerate(toks):
-            if tok in nomi:
+            if _e_nome_lingua(tok, nomi):
                 prima = toks[:j]
                 if any(p in _VERBI_CAMBIO for p in prima):
-                    # imperativo: il primo vocabolo significativo è un verbo di cambio ("parla", "speak", "habla"...)
+                    # imperativo: un verbo di cambio ("parla", "speak", "habla"...) tra i primi due vocaboli
+                    # significativi (il secondo posto copre un'esitazione tipo "Escolta, cambia lingua...")
                     significativi = [p for p in toks if p not in _SALTA]
-                    if significativi and significativi[0] in _VERBI_CAMBIO:
+                    if any(p in _VERBI_CAMBIO for p in significativi[:2]):
                         return codice
                 if len(toks) <= 3 and prima and prima[0] in ("in", "en", "au", "a"):
                     return codice

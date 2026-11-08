@@ -22,12 +22,13 @@ import unicodedata
 from collections import deque, namedtuple
 from pathlib import Path
 
+import eva_percorsi as percorsi
 from comandi import normalizza
 
 import memoria
 import vox_lingue as lingue
 
-FILE_RISPOSTE = Path(__file__).with_name("risposte.json")
+FILE_RISPOSTE = percorsi.risorsa("risposte.json")
 
 # testo: cosa dire | azione: None / "chiudi" / "voce_off" / "voce_on" | continua: resta in ascolto
 Risposta = namedtuple("Risposta", "testo azione continua nome_intento")
@@ -323,6 +324,70 @@ def frase_data(oggi=None):
 
 
 # ----------------------------------------------------------------------
+# Ora e data a parole chiave: regge gli errori del riconoscimento vocale ("che ora sono", "chi ora sono")
+# e le parole in più prima del nome ("Poi riprovo, Eva che ore sono"). Solo in italiano.
+# ----------------------------------------------------------------------
+_CHIEDE = {"che", "chi", "quale", "qual", "dimmi", "dimmela", "dici", "dirmi", "dire", "sai", "saresti", "sapere"}
+# parole che indicano un'altra richiesta ("tra un'ora", "a che ora ricordami", "sveglia"...): meglio non rispondere
+_ALTRO = {"a", "alle", "all", "tra", "fra", "per", "dopo", "prima", "ogni", "timer", "sveglia", "promemoria",
+          "ricordami", "ricordarmi", "ricorda", "allarme", "scadenza", "compleanno", "festa", "natale", "pasqua",
+          "evento", "appuntamento", "buon", "buona", "buongiorno"}
+_ALTRO_ORA = _ALTRO | {"di", "del", "della", "quante", "quanto", "quanti", "mezza", "un", "una", "due", "tre"}
+_SCARTO_DATA = {"a", "alle", "all"}                     # per la data queste parole non contano
+
+
+def _richiesta_ora_data(frase, varianti_wake=()):
+    """('ora'|'data', spostamento_in_giorni) se la frase chiede l'ora o la data di oggi/ieri/domani, altrimenti None."""
+    parole = normalizza(frase.replace("'", " ")).split()
+    wake = {normalizza(v) for v in varianti_wake if " " not in normalizza(v)}
+    for i in range(len(parole) - 1, -1, -1):             # tengo solo ciò che segue l'ultima chiamata a Eva
+        if parole[i] in wake:
+            parole = parole[i + 1:] if i < len(parole) - 1 else parole[:i]
+            break
+    if not parole or len(parole) > 8:
+        return None
+    insieme = set(parole)
+    if insieme & {"ora", "ore"} and insieme & _CHIEDE and not insieme & _ALTRO_ORA:
+        return ("ora", 0)
+    mesi = {normalizza(m) for m in MESI} | {normalizza(g) for g in GIORNI}
+    cifre = any(any(c.isdigit() for c in p) for p in parole)
+    chiede_data = ((insieme & {"giorno", "data"} and (insieme & _CHIEDE or insieme & {"oggi", "siamo", "abbiamo", "domani", "ieri", "dopodomani"}))
+                   or ("quanti" in insieme and "ne" in insieme and insieme & {"abbiamo", "oggi", "domani", "ieri"}))
+    if chiede_data and not insieme & (_ALTRO - _SCARTO_DATA) and not insieme & mesi and not cifre:
+        if "dopodomani" in insieme:
+            return ("data", 2)
+        if "domani" in insieme:
+            return ("data", 1)
+        if "ieri" in insieme:
+            return ("data", -1)
+        return ("data", 0)
+    return None
+
+
+def _parla_d_altro(frase):
+    """True se la frase contiene un luogo/tempo/data precisi ("a Londra", "il 5 maggio", "tra un'ora"):
+    in quel caso l'ora o la data di adesso sarebbe una risposta sbagliata."""
+    parole = normalizza(frase.replace("'", " ")).split()
+    mesi = {normalizza(m) for m in MESI} | {normalizza(g) for g in GIORNI}
+    return bool(set(parole) & (_ALTRO | mesi)) or any(any(c.isdigit() for c in p) for p in parole)
+
+
+def _risposta_ora_data(tipo, giorni):
+    """Legge l'orologio del computer. Per oggi usa i testi di risposte.json (modificabili)."""
+    if tipo == "data" and giorni:
+        giorno = datetime.date.today() + datetime.timedelta(days=giorni)
+        inizio = {2: "Dopodomani sarà", 1: "Domani sarà", -1: "Ieri era"}[giorni]
+        return Risposta(f"{inizio} {frase_data(giorno)}.", None, False, "data")
+    intento = next((i for i in _dati.get("intenti", []) if i.get("nome") == tipo), None)
+    if intento and intento.get("risposte"):
+        testo = _scegli("intento:" + tipo, intento["risposte"], ora=frase_ora(), data=frase_data(),
+                        saluto_ora=saluto_per_ora())
+    else:
+        testo = frase_ora() + "." if tipo == "ora" else f"Oggi è {frase_data()}."
+    return Risposta(testo, None, False, tipo)
+
+
+# ----------------------------------------------------------------------
 # Riconoscimento della frase (difflib: capisce anche le frasi pronunciate male)
 # ----------------------------------------------------------------------
 def _pulisci(frase, varianti_wake):
@@ -376,7 +441,13 @@ def trova_intento(frase, varianti_wake=()):
 # ----------------------------------------------------------------------
 def rispondi(frase, varianti_wake=()):
     """Risposta a saluti e chiacchiere NOTE (risposte.json). Restituisce Risposta(...) o None."""
+    if lingue.corrente == "it":
+        richiesta = _richiesta_ora_data(frase, varianti_wake)
+        if richiesta:
+            return _risposta_ora_data(*richiesta)
     intento = trova_intento(frase, varianti_wake)
+    if intento is not None and intento["nome"] in ("ora", "data") and _parla_d_altro(frase):
+        intento = None            # "a che ora è la riunione", "che giorno è il 5 maggio": non è l'ora/data di adesso
     if intento is None:
         # "chiudi Chrome", "chiudi finestra"...: NON chiude Eva (solo "chiudi" da solo lo fa)
         parole = _pulisci(frase, varianti_wake).split()

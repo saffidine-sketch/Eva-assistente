@@ -27,12 +27,13 @@ import unicodedata
 import uuid
 from pathlib import Path
 
+import eva_percorsi as percorsi
 import vox_cervello as cervello
 from comandi import ARTICOLI, applica_correzioni, normalizza, registra_non_trovato
 
-AQUI = Path(__file__).parent
-FILE_INDICE = AQUI / "indice_cartelle.json"
-FILE_ALIAS = AQUI / "alias_cartelle.json"
+AQUI = percorsi.CARTELLA_DATI
+FILE_INDICE = percorsi.dati("indice_cartelle.json")
+FILE_ALIAS = percorsi.dati("alias_cartelle.json")
 
 # --- impostazioni (le ridefinisce dettatura.py tramite configura()) ---
 IMP = {

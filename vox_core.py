@@ -30,6 +30,7 @@ import aiuto
 import comandi_pc
 import memoria
 import promemoria
+import utilita
 import vox_lingue as lingue
 import vox_operazioni as operazioni
 from azioni import MAX_PAROLE_OGGETTO, Risultato, _norm_token, chiudi_finestra, interpreta
@@ -202,6 +203,7 @@ class Vox:
         self._t_fase = time.perf_counter()
         self._pr_stato = None                # domanda in corso sui promemoria (cosa / quando / mattina-pomeriggio / cancella...)
         self._pr_prossimo = 0.0              # prossimo controllo dei promemoria scaduti
+        self._ut_stato = None                # domanda in corso sulle utilità (durata del timer, conferma di Wi-Fi, appunti...)
         self._aiuto_stato = None             # ho chiesto "vuoi sentire i dettagli di un gruppo?" e aspetto la risposta
         self._pc_attesa = None               # conferma a voce in sospeso per un comando pericoloso (libreria PC)
         self._ultima_conf = None             # sicurezza dell'ultima trascrizione (avg_logprob più basso dei pezzi tenuti)
@@ -249,6 +251,12 @@ class Vox:
                 self._stream.close()
             except Exception:
                 pass
+
+    def cambia_lingua_da_menu(self, codice):
+        """Dal menu accanto all'orologio: cambia lingua come il comando vocale (in un thread, senza bloccare la finestra)."""
+        if codice == lingue.corrente or not self.pronto:
+            return
+        threading.Thread(target=self._cambia_lingua, args=(codice,), daemon=True).start()
 
     def attiva_ora(self):
         """Come dire "Eva": la finestra compare e Eva aspetta un comando."""
@@ -723,7 +731,7 @@ class Vox:
                 and self._ultima_conf < float(self.imp.get("COMPAGNA_CONFIDENZA_MIN", -0.7))
                 and not (operazioni.in_attesa() or vox_file.scelta_in_attesa() or self._pc_attesa is not None
                          or self._pr_stato is not None or self._aiuto_stato is not None
-                         or self._attesa_citta is not None)):
+                         or self._ut_stato is not None or self._attesa_citta is not None)):
             self.log(f"Scartata (compagna): sicurezza {self._ultima_conf:.2f} < {self.imp.get('COMPAGNA_CONFIDENZA_MIN', -0.7)}: {testo!r}")
             registro.scrivi(f"FRASE SCARTATA (sicurezza bassa {self._ultima_conf:.2f}, nessuna risposta): {testo[:150]}")
             self.vad.reset()
@@ -789,6 +797,15 @@ class Vox:
                     return
             except Exception:
                 self.log.errore("Errore nei promemoria")
+
+        # UTILITÀ (utilita.py): timer, cronometro, sveglia, appunti, calcoli, batteria, musica, luminosità, Wi-Fi, Bluetooth
+        if da_vox or self.conversazione:
+            try:
+                if self._ut_gestisci(originale):
+                    return
+            except Exception:
+                self.log.errore("Errore nelle utilità")
+                self._ut_stato = None
                 self._pr_stato = None
 
         # LIBRERIA COMANDI PC: finestre, programmi, cartelle, testo, browser, suono, scorrimento, sistema (comandi_pc.py).
@@ -1166,6 +1183,29 @@ class Vox:
             return self._pr_elenca()
         return self._pr_cancella(frase, lg)
 
+    def _ut_gestisci(self, frase):
+        """Utilità (utilita.py): timer, cronometro, sveglia, appunti, calcoli, batteria, musica, luminosità, Wi-Fi,
+        Bluetooth. Solo in italiano. Restituisce True se la frase era per le utilità."""
+        if lingue.corrente != "it":
+            return False
+        if (operazioni.in_attesa() or operazioni.in_corso() or vox_file.scelta_in_attesa() or self._pc_attesa is not None
+                or self._pr_stato is not None):
+            return False
+        st, self._ut_stato = self._ut_stato, None
+        if st is not None and time.time() > st.get("scade", 0):
+            self.log("Utilità: la domanda è scaduta, non faccio niente")
+            st = None
+        r = utilita.interpreta(frase, st)
+        if r is None:
+            return False
+        self.log(f"Utilità: «{frase}» -> {r.tipo}")
+        if r.analisi is not None:                          # una sveglia: la completa il flusso dei promemoria
+            return self._pr_nuovo(r.analisi)
+        if r.stato:
+            self._ut_stato = {**r.stato, "scade": time.time() + 30}
+        self.log("Azione eseguita: " + r.tipo)
+        return self._pr_dire(r.testo, attesa=bool(r.stato))
+
     def _pr_nuovo(self, a):
         """Ho cosa e quando? Salvo e ripeto a voce. Altrimenti CHIEDO (non indovino)."""
         adesso = dt.datetime.now()
@@ -1185,14 +1225,19 @@ class Vox:
             self._pr_stato = {"fase": "giorno", "a": a, "ora": val, "scade": time.time() + 40, "tentativi": 0}
             return self._pr_dire(promemoria.tx("chiedi_giorno", ora=f"{h}:{m:02d}"), attesa=True)
         self._pr_stato = {"fase": "quando", "a": a, "scade": time.time() + 40, "tentativi": 0}
-        return self._pr_dire(promemoria.tx("chiedi_quando"), attesa=True)
+        sveglia = getattr(a, "tipo", None) == "sveglia"
+        return self._pr_dire("A che ora vuoi la sveglia?" if sveglia else promemoria.tx("chiedi_quando"), attesa=True)
 
     def _pr_salva(self, a, quando, adesso):
-        p = promemoria.aggiungi(a.cosa.strip(), quando, a.lingua)
-        self.log(f"Promemoria: SALVATO «{p['cosa']}» per {p['quando']} (id {p['id']})")
-        detta = promemoria.tx("conferma", cosa=promemoria.cosa_parlata(p["cosa"], a.lingua),
-                              quando=promemoria.quando_parlato(quando, adesso, a.rel))
-        self.log("Azione eseguita: promemoria salvato")
+        tipo = getattr(a, "tipo", None)
+        p = promemoria.aggiungi(a.cosa.strip(), quando, a.lingua, tipo=tipo)
+        self.log(f"Promemoria: SALVATO «{p['cosa']}» per {p['quando']} (id {p['id']})" + (f" [{tipo}]" if tipo else ""))
+        if tipo == "sveglia":
+            detta = utilita.conferma_sveglia(quando, adesso, a.rel)
+        else:
+            detta = promemoria.tx("conferma", cosa=promemoria.cosa_parlata(p["cosa"], a.lingua),
+                                  quando=promemoria.quando_parlato(quando, adesso, a.rel))
+        self.log("Azione eseguita: " + ("sveglia impostata" if tipo == "sveglia" else "promemoria salvato"))
         self._pr_stato = None
         return self._pr_dire(detta)
 
@@ -1329,7 +1374,8 @@ class Vox:
         self._pr_prossimo = ora + 1.0
         if self.f9_giu or self.modo == "f9" or self.voce.parlando():
             return
-        if self._pr_stato is not None or self._pc_attesa is not None or operazioni.in_attesa() or operazioni.in_corso():
+        if (self._pr_stato is not None or self._ut_stato is not None or self._pc_attesa is not None
+                or operazioni.in_attesa() or operazioni.in_corso()):
             return
         if self.modo != "riposo" and not self.conversazione:
             return
@@ -1345,7 +1391,11 @@ class Vox:
         lg = p.get("lingua", lingue.corrente)
         nome = cervello.nome_utente()
         cosa = promemoria.cosa_parlata(p["cosa"], lg)
-        if ritardo > 120:                                  # Eva era spenta (o occupata) all'ora del promemoria
+        # timer e sveglia (utilita.py) hanno la loro frase; i promemoria normali quella di sempre
+        detta = utilita.annuncio(p, nome, ritardo, promemoria.quando_parlato(quando, adesso), cervello.frase_ora(adesso))
+        if detta is not None:
+            pass
+        elif ritardo > 120:                                # Eva era spenta (o occupata) all'ora del promemoria
             detta = promemoria.tx("annuncio_ritardo", lg=lg, nome=nome, cosa=cosa,
                                   quando=promemoria.quando_parlato(quando, adesso))
         else:
@@ -1665,7 +1715,7 @@ class Vox:
         if conf is None or conf < minimo:
             return f"sicurezza bassa ({'-' if conf is None else f'{conf:.2f}'} < {minimo})"
         if operazioni.in_attesa() or vox_file.scelta_in_attesa() or self._pc_attesa is not None or self._pr_stato is not None \
-                or self._aiuto_stato is not None:
+                or self._aiuto_stato is not None or self._ut_stato is not None:
             return "aspetto una conferma o una scelta: parola breve e importante"
         if comandi_pc.trova(testo):
             return None                                      # frase intera della libreria dei comandi: la veloce basta

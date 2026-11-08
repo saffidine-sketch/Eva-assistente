@@ -9,7 +9,8 @@ import datetime as dt
 import threading
 from pathlib import Path
 
-FILE_REGISTRO = Path(__file__).with_name("eva_log.txt")
+import eva_percorsi as percorsi
+FILE_REGISTRO = percorsi.dati("eva_log.txt")
 MAX_BYTE = 1_000_000            # oltre 1 MB il vecchio file diventa eva_log.old.txt (se ne tiene uno)
 _blocco = threading.Lock()
 

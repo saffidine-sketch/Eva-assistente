@@ -18,6 +18,7 @@ import re
 import comandi_pc
 import memoria
 import promemoria
+import utilita
 import vox_lingue as lingue
 
 LINGUE = ("it", "fr", "es", "en")
@@ -33,6 +34,7 @@ GRUPPI = [
     {"id": "testo_browser", "cat": ("Testo", "Browser", "Scorrimento")},
     {"id": "volume", "cat": ("Schermo e suono",)},
     {"id": "promemoria", "esempi": lambda: promemoria.ESEMPI},
+    {"id": "utilita", "esempi": lambda: utilita.ESEMPI},
     {"id": "conversazione", "esempi": lambda: memoria.ESEMPI},
     {"id": "lingua", "esempi": lambda: lingue.ESEMPI},
 ]
@@ -42,6 +44,8 @@ NOMI = {
     "testo_browser": {"it": "testo e browser", "fr": "texte et navigateur", "es": "texto y navegador", "en": "text and browser"},
     "volume": {"it": "volume", "fr": "volume", "es": "volumen", "en": "volume"},
     "promemoria": {"it": "promemoria", "fr": "rappels", "es": "recordatorios", "en": "reminders"},
+    "utilita": {"it": "timer, appunti e utilità del PC"},          # solo italiano
+
     "conversazione": {"it": "domande e conversazione", "fr": "questions et conversation", "es": "preguntas y conversación", "en": "questions and conversation"},
     "lingua": {"it": "cambio lingua", "fr": "changement de langue", "es": "cambio de idioma", "en": "changing language"},
 }
@@ -56,6 +60,7 @@ CHIAVI = {
                       "es": "texto navegador desplazamiento pestanas pestana internet", "en": "text browser scrolling tabs tab internet"},
     "volume": {"it": "volume suono audio schermata", "fr": "volume son audio capture", "es": "volumen sonido audio captura", "en": "volume sound audio screenshot"},
     "promemoria": {"it": "promemoria ricordi", "fr": "rappels rappel", "es": "recordatorios recordatorio", "en": "reminders reminder"},
+    "utilita": {"it": "utilita timer sveglia cronometro appunti note calcoli calcolatrice batteria musica luminosita wifi bluetooth"},
     "conversazione": {"it": "domande domanda conversazione meteo chiacchiere chiacchierare", "fr": "questions question conversation meteo discussion",
                       "es": "preguntas pregunta conversacion tiempo charla", "en": "questions question conversation weather chat"},
     "lingua": {"it": "lingua lingue idioma", "fr": "langue langues", "es": "idioma idiomas lengua", "en": "language languages"},

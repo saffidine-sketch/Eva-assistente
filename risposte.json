@@ -71,14 +71,16 @@
     {
       "nome": "ora",
       "frasi": ["che ore sono", "che ora è", "che ora e", "sai che ore sono", "mi dici l'ora",
-                "dimmi l'ora", "che ore abbiamo", "che ora fa"],
+                "dimmi l'ora", "che ore abbiamo", "che ora fa", "che ora sono", "sai dirmi l'ora",
+                "mi sai dire l'ora", "che ore sono adesso"],
       "risposte": ["{ora}.", "{ora}, {nome}.", "Guardo l'orologio. {ora}."]
     },
     {
       "nome": "data",
       "frasi": ["che giorno è oggi", "che giorno è", "che giorno e oggi", "che data è oggi",
                 "che data è", "dimmi la data", "in che giorno siamo", "quanti ne abbiamo oggi",
-                "che giorno della settimana è"],
+                "che giorno della settimana è", "qual è la data di oggi", "che data abbiamo oggi",
+                "che giorno abbiamo oggi"],
       "risposte": ["Oggi è {data}.", "Oggi è {data}, {nome}.", "Siamo a {data}."]
     },
     {

@@ -11,7 +11,8 @@ import json
 import os
 from pathlib import Path
 
-FILE_IMPOSTAZIONI = Path(__file__).with_name("impostazioni_eva.json")
+import eva_percorsi as percorsi
+FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 VARIABILE = "GROQ_API_KEY"
 _REGISTRO = "Environment"                     # HKEY_CURRENT_USER\Environment: le variabili d'ambiente dell'utente
 LINK_CHIAVI = "https://console.groq.com/keys"

@@ -18,8 +18,10 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
+import eva_percorsi as percorsi
+import vox_lingue as lingue
 from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer
-from PySide6.QtGui import (QAction, QColor, QCursor, QFont, QFontMetrics, QGuiApplication, QIcon, QImage,
+from PySide6.QtGui import (QAction, QActionGroup, QColor, QCursor, QFont, QFontMetrics, QGuiApplication, QIcon, QImage,
                            QPainter, QPen, QPixmap)
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
@@ -30,7 +32,7 @@ DURATA_COMPARSA = 1.1                  # secondi: la sfera cresce da piccola (pr
 DURATA_DISSOLVENZA = 0.35              # secondi: la finestra sparisce (veloce: si deve vedere subito quello che Eva ha aperto)
 DURATA_ANIMAZIONE = 0.5                # secondi: da grande a ridotta e viceversa
 OPACITA_GRANDE = 0.999                 # (non 1.0: così la finestra resta "a strati" e i clic possono passare attraverso)
-FILE_IMPOSTAZIONI = Path(__file__).with_name("impostazioni_eva.json")
+FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 
 AZZURRO = QColor(150, 200, 255)
 
@@ -86,7 +88,7 @@ def _limita(x, a, b):
     return max(a, min(b, x))
 
 
-FILE_CHIUSURA_VOLONTARIA = Path(__file__).with_name("chiusura_volontaria.flag")
+FILE_CHIUSURA_VOLONTARIA = percorsi.dati("chiusura_volontaria.flag")
 
 
 class BottoneX(QWidget):

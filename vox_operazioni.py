@@ -33,12 +33,13 @@ import threading
 import time
 from pathlib import Path
 
+import eva_percorsi as percorsi
 import vox_cervello as cervello
 import vox_file as vf
 from comandi import ARTICOLI, normalizza
 
-AQUI = Path(__file__).parent
-FILE_LOG_OP = AQUI / "operazioni.log"
+AQUI = percorsi.CARTELLA_DATI
+FILE_LOG_OP = percorsi.dati("operazioni.log")
 
 IMP = {
     "OPERAZIONI_FILE": True,             # False = copia e sposta spenti

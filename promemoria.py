@@ -21,9 +21,10 @@ import unicodedata
 import uuid
 from pathlib import Path
 
+import eva_percorsi as percorsi
 import vox_lingue as lingue
 
-FILE = Path(__file__).with_name("promemoria.json")
+FILE = percorsi.dati("promemoria.json")
 _blocco = threading.RLock()
 LINGUE = ("it", "fr", "es", "en")
 
@@ -245,6 +246,7 @@ class Analisi:
         self.giorno = None       # ("off", n) | ("wd", n)
         self.cosa = ""
         self.lingua = "it"
+        self.tipo = None         # None = promemoria normale | "sveglia" (la crea utilita.py)
 
 
 def analizza(testo, lg, solo_quando=False):
@@ -392,6 +394,15 @@ def risolvi(a, adesso):
     else:
         cand_ore = None                                  # 1..11 senza indicazioni: ambiguo mattina/pomeriggio
     d = data_del_giorno()
+    if (getattr(a, "tipo", None) == "sveglia" and a.hint is None and 1 <= h <= 11
+            and (h >= 6 or adesso.hour >= 20 or adesso.hour < 5 or (d is not None and d > adesso.date()))):
+        # una SVEGLIA alle 6-11 è sempre di mattina (e di notte anche alle 1-5): non serve chiedere mattina o pomeriggio
+        if d is None:
+            q = dt.datetime.combine(adesso.date(), dt.time(h, m))
+            return "ok", q if q > adesso else q + dt.timedelta(days=1)
+        q = dt.datetime.combine(d, dt.time(h, m))
+        if q > adesso:
+            return "ok", q
     if cand_ore is not None:
         ore = cand_ore[0]
         if d is not None:
@@ -468,11 +479,14 @@ def elenco():
         return sorted(_leggi(), key=lambda p: p["quando"])
 
 
-def aggiungi(cosa, quando, lingua):
+def aggiungi(cosa, quando, lingua, tipo=None):
+    """tipo: None (promemoria) | "timer" | "sveglia": Eva lo annuncia con la frase giusta (utilita.annuncio)."""
     with _blocco:
         lista = _leggi()
         p = {"id": uuid.uuid4().hex[:8], "cosa": cosa, "quando": quando.strftime("%Y-%m-%dT%H:%M:%S"),
              "creato": dt.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "lingua": lingua}
+        if tipo:
+            p["tipo"] = tipo
         lista.append(p)
         _scrivi(lista)
         return p

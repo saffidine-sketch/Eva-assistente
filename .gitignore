@@ -15,3 +15,14 @@ __pycache__/
 *.lnk
 *.bak
 .env
+
+# Costruzione dell'installer
+build_installer/
+installer_output/
+
+# Dati personali dell'utente (nel repository restano solo i file *.esempio.json)
+rubrica.json
+alias_utente.json
+correzioni.json
+appunti.json
+promemoria.json

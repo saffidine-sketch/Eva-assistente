@@ -16,9 +16,16 @@ $vecchio = Join-Path $Cartella 'Vox.lnk'
 
 switch ($Azione) {
     'attiva' {
-        $pyw = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\pythonw.exe'
-        if (-not (Test-Path $pyw)) {
-            $pyw = (Get-Command pythonw -ErrorAction SilentlyContinue).Source
+        $exe = Join-Path $qui 'Eva.exe'
+        if (Test-Path $exe) {                       # Eva installata: parte Eva.exe, senza Python
+            $pyw = $exe
+            $argEva = ''
+        } else {                                    # da sorgente: pythonw dettatura.py
+            $pyw = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\pythonw.exe'
+            if (-not (Test-Path $pyw)) {
+                $pyw = (Get-Command pythonw -ErrorAction SilentlyContinue).Source
+            }
+            $argEva = '"' + (Join-Path $qui 'dettatura.py') + '"'
         }
         if (-not $pyw) { Write-Host 'pythonw non trovato: controlla che Python sia installato.'; exit 1 }
         if (Test-Path $vecchio) {
@@ -28,7 +35,7 @@ switch ($Azione) {
         $ws = New-Object -ComObject WScript.Shell
         $s = $ws.CreateShortcut($collegamento)
         $s.TargetPath = $pyw
-        $s.Arguments = '"' + (Join-Path $qui 'dettatura.py') + '"'
+        $s.Arguments = $argEva
         $s.WorkingDirectory = $qui
         $s.WindowStyle = 7          # minimizzata: nessuna finestra
         $s.Description = 'Eva - assistente vocale'

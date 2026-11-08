@@ -20,6 +20,7 @@ import threading
 import time
 from pathlib import Path
 
+import eva_percorsi as percorsi
 VERSIONE = "2.1"             # versione di Eva (si scrive in eva_log.txt a ogni avvio)
 
 T0 = time.perf_counter()      # per misurare i tempi di avvio (scritti in eva.log come "TEMPO avvio")
@@ -159,8 +160,8 @@ VARIANTI_VECCHIO_NOME = ["vox", "box", "vocs", "vos", "voks", "bocs", "vogs", "v
 WAKE_VARIANTI = VARIANTI_NOME + (VARIANTI_VECCHIO_NOME if ACCETTA_VECCHIO_NOME else [])   # (non modificare)
 
 PORTA_ISTANZA_UNICA = 47625     # porta locale per non far partire due copie
-FILE_LOG = Path(__file__).with_name("eva.log")
-FILE_LOG_VECCHIO = Path(__file__).with_name("vox.log")   # il registro di quando si chiamava Vox
+FILE_LOG = percorsi.dati("eva.log")
+FILE_LOG_VECCHIO = percorsi.dati("vox.log")   # il registro di quando si chiamava Vox
 
 
 # ----------------------------------------------------------------------

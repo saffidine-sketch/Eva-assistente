@@ -34,6 +34,7 @@ import winreg
 from collections import namedtuple
 from pathlib import Path
 
+import eva_percorsi as percorsi
 # ======================================================================
 # ELENCHI DA MODIFICARE (nomi in minuscolo, senza accenti)
 # L'ordine conta: i primi sono i "più usati" e vincono a parità di somiglianza.
@@ -239,11 +240,11 @@ SOGLIA_VERBO_SICURO = 0.74  # per "abri", "apre"... (parola di lunghezza simile)
 SOGLIA_VERBO_INCERTO = 0.60
 
 # File con gli errori ricorrenti, nella stessa cartella di questo script
-FILE_CORREZIONI = Path(__file__).with_name("correzioni.json")
+FILE_CORREZIONI = percorsi.dati("correzioni.json")
 # Alias tuoi (nome detto -> app), anche creati a voce con "impara <nome> è <app>"
-FILE_ALIAS_UTENTE = Path(__file__).with_name("alias_utente.json")
+FILE_ALIAS_UTENTE = percorsi.dati("alias_utente.json")
 # Nomi che non sono stati trovati: serve per aggiungere in seguito l'alias giusto
-FILE_NON_TROVATI = Path(__file__).with_name("non_trovati.txt")
+FILE_NON_TROVATI = percorsi.dati("non_trovati.txt")
 
 # ======================================================================
 # COMANDI DIVERSI DA "APRI" (facili da aggiungere)

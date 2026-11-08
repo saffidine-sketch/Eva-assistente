@@ -15,9 +15,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import eva_percorsi as percorsi
 import vox_lingue as lingue
 
-FILE_IMPOSTAZIONI = Path(__file__).with_name("impostazioni_eva.json")
+FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 TIMEOUT = 6
 _log = logging.getLogger("eva")
 
