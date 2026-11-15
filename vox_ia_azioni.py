@@ -18,7 +18,9 @@ import logging
 import os
 import re
 
+import profilo
 import vox_lingue as lingue
+import vox_provider as provider
 
 MODELLO = "qwen/qwen3.8-27b"        # modello veloce: per tradurre un ordine in JSON basta (mediana circa 0,2 s)
 MODELLO_RISERVA = "openai/gpt-oss-120b"   # se il veloce dà errore (limite del piano gratuito...) si riprova con questo
@@ -76,7 +78,7 @@ def _extra_pc():
 
 
 def _nome():
-    return IMP.get("NOME_UTENTE") or "amico"
+    return profilo.nome() or IMP.get("NOME_UTENTE") or "amico"
 
 
 def contesto():
@@ -106,15 +108,13 @@ def configura(imp):
 
 
 def attiva():
-    return bool(IMP.get("GROQ_AZIONI")) and bool(os.environ.get("GROQ_API_KEY"))
+    return bool(IMP.get("GROQ_AZIONI")) and bool(provider.chiave())
 
 
 def _crea_client():
     global _client
     if _client is None:
-        from groq import Groq
-        _client = Groq(api_key=os.environ.get("GROQ_API_KEY"),
-                       timeout=float(IMP.get("GROQ_AZIONI_TIMEOUT", 8)), max_retries=0)
+        _client = provider.crea_client(float(IMP.get("GROQ_AZIONI_TIMEOUT", 8)), 0)
     return _client
 
 
@@ -189,21 +189,17 @@ def chiedi_azione(frase):
         client = _crea_client()
     except Exception:
         return "spenta", None
-    try:
-        import groq
-        errori_rete = (groq.APIConnectionError,)     # include APITimeoutError
-    except Exception:
-        errori_rete = ()
+    errori_rete = provider.errori_rete()                # include APITimeoutError
     testo = None
-    elenco = (MODELLO, MODELLO_RISERVA)
+    elenco = provider.modelli(MODELLO, MODELLO_RISERVA)
     for modello in elenco:
         try:
             esito = client.chat.completions.create(
-                model=modello, temperature=0, max_completion_tokens=300,
+                model=modello, temperature=0, **provider.limite(300),
                 **({"reasoning_effort": "low"} if "gpt-oss" in modello else {}),
                 response_format={"type": "json_object"},
-                messages=[{"role": "system", "content": ISTRUZIONI.replace("@NOME@", _nome()) + _extra_pc() + lingue.groq_ordini_extra()
-                           + (ISTRUZIONI_COMPAGNA.replace("@NOME@", _nome()) + contesto() if IMP.get("COMPAGNA") else "")},
+                messages=[{"role": "system", "content": profilo.personalizza(ISTRUZIONI + _extra_pc() + lingue.groq_ordini_extra()
+                           + (ISTRUZIONI_COMPAGNA + contesto() if IMP.get("COMPAGNA") else ""))},
                           {"role": "user", "content": frase}])
             testo = (esito.choices[0].message.content or "").strip()
             break

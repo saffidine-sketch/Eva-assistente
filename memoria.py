@@ -162,6 +162,9 @@ ISTRUZIONE_GROQ = {
     "es": (" Tienes la memoria de la conversación en curso (los últimos intercambios, arriba). Úsala para entender las frases "
            "que se refieren a las anteriores, como «¿y mañana?», «¿y en Roma?», «repite» o «dime más». Si no está claro a qué "
            "se refiere la frase, pregunta de qué se está hablando en lugar de adivinar."),
+    "pt": (" Você tem a memória da conversa em andamento (as últimas trocas, acima). Use-a para entender as frases que se "
+           "referem às anteriores, como «e amanhã?», «e em Roma?», «repete» ou «me diz mais». Se não estiver claro a que "
+           "a frase se refere, pergunte do que estamos falando em vez de adivinhar."),
     "en": (" You have the memory of the current conversation (the latest exchanges, above). Use it to understand sentences "
            "that refer to the previous ones, like \"and tomorrow?\", \"and in Rome?\", \"repeat\" or \"tell me more\". If it "
            "isn't clear what the sentence refers to, ask what we are talking about instead of guessing."),
@@ -179,6 +182,7 @@ _GIORNI = {
     "it": {"oggi": 0, "stasera": 0, "stamattina": 0, "questa sera": 0, "questa notte": 0, "domani": 1, "dopodomani": 2, "dopo domani": 2},
     "fr": {"aujourd hui": 0, "ce soir": 0, "ce matin": 0, "demain": 1, "apres demain": 2},
     "es": {"hoy": 0, "esta noche": 0, "esta tarde": 0, "esta manana": 0, "manana": 1, "pasado manana": 2},
+    "pt": {"hoje": 0, "esta noite": 0, "esta tarde": 0, "esta manha": 0, "amanha": 1, "depois de amanha": 2},
     "en": {"today": 0, "tonight": 0, "this evening": 0, "tomorrow": 1, "the day after tomorrow": 2},
 }
 
@@ -195,6 +199,8 @@ _NON_LUOGHI = {
            "pourquoi", "quand", "ou", "qui", "combien", "ca", "ceci", "non", "oui"},
     "es": {"tu", "usted", "vos", "yo", "luego", "entonces", "despues", "ahora", "tambien", "todavia", "como", "que",
            "por que", "cuando", "donde", "quien", "cuanto", "eso", "esto", "no", "si"},
+    "pt": {"voce", "eu", "entao", "depois", "agora", "tambem", "ainda", "como", "que", "por que", "quando", "onde",
+           "quem", "quanto", "isso", "isto", "nao", "sim"},
     "en": {"you", "me", "then", "so", "now", "also", "still", "how", "what", "why", "when", "where", "who", "that", "this",
            "no", "yes", "else", "more"},
 }
@@ -226,6 +232,15 @@ _P = {
         "e_giorno": r"y\s+(?:para\s+)?(?P<g>{giorni})",
         "e_luogo": r"y\s+(?:en|a|para|de)?\s*(?P<luogo>[a-z][a-z ]{{1,28}}?)(?:\s+(?P<g>{giorni}))?",
     },
+    "pt": {
+        "dimentica": r"esquece tudo|esqueca tudo|esquece a conversa|vamos recomecar|recomecar do zero|recomeca|apaga a conversa|limpa a memoria|apaga a memoria",
+        "ripeti": r"repete(?:lo|la)?|pode repetir|poderia repetir|repetir|de novo|mais uma vez|o que voce disse|o que disse|nao ouvi|nao entendi",
+        "piano": r"(?:fala|diz|repete|diga|fale)\s+(?:isso\s+)?mais\s+(?:devagar|lento|lentamente|baixo)|mais devagar|mais lentamente",
+        "di_piu": r"me diz mais|me conta mais|conta mais|diz mais|mais detalhes|me da mais detalhes|continua|segue|explica melhor|e depois|aprofunda",
+        "chiarimento": r"por que|porque|como assim|de verdade|serio|o que voce quer dizer|tem certeza",
+        "e_giorno": r"e\s+(?:para\s+)?(?P<g>{giorni})",
+        "e_luogo": r"e\s+(?:em|a|para|de|no|na)?\s*(?P<luogo>[a-z][a-z ]{{1,28}}?)(?:\s+(?P<g>{giorni}))?",
+    },
     "en": {
         "dimentica": r"forget everything|forget all that|forget it all|forget the conversation|let s start over|start over|start again|let s start again|clear the conversation|clear your memory|reset the conversation|reset your memory",
         "ripeti": r"repeat(?: that| it)?|say that again|say it again|what did you say|what was that|come again|once more|one more time|pardon|sorry what",
@@ -243,6 +258,8 @@ TX = {
            "niente_da_ripetere": "Il n'y a rien à répéter.", "solo_oggi_domani": "Je peux te donner la météo seulement pour aujourd'hui et demain."},
     "es": {"dimenticato": "Hecho, he olvidado nuestra conversación.", "chiedi_argomento": "¿De qué estamos hablando?",
            "niente_da_ripetere": "No hay nada que repetir.", "solo_oggi_domani": "Solo puedo darte el tiempo de hoy y de mañana."},
+    "pt": {"dimenticato": "Pronto, esqueci a nossa conversa.", "chiedi_argomento": "Do que estamos falando?",
+           "niente_da_ripetere": "Não há nada para repetir.", "solo_oggi_domani": "Só posso dar a previsão do tempo de hoje e de amanhã."},
     "en": {"dimenticato": "Done, I've forgotten our conversation.", "chiedi_argomento": "What are we talking about?",
            "niente_da_ripetere": "There's nothing to repeat.", "solo_oggi_domani": "I can only give you the weather for today and tomorrow."},
 }
@@ -253,6 +270,7 @@ ESEMPI = {
     "it": ["che tempo fa a Milano", "e domani", "raccontami una curiosità", "dimmi di più", "ripeti", "dimentica tutto"],
     "fr": ["quel temps fait-il à Paris", "et demain", "raconte-moi une anecdote", "dis-m'en plus", "répète", "oublie tout"],
     "es": ["qué tiempo hace en Madrid", "y mañana", "cuéntame una curiosidad", "dime más", "repite", "olvida todo"],
+    "pt": ["como está o tempo em Lisboa", "e amanhã", "me conta uma curiosidade", "me diz mais", "repete", "esquece tudo"],
     "en": ["what's the weather in London", "and tomorrow", "tell me an interesting fact", "tell me more", "repeat", "forget everything"],
 }
 
@@ -295,6 +313,6 @@ def riconosci(frase):
 def frase_meteo(citta, giorno):
     """Ricostruisce una domanda sul meteo completa (da dare al riconoscimento del meteo)."""
     lg = lingue.corrente
-    g = {"it": ("oggi", "domani"), "fr": ("aujourd'hui", "demain"), "es": ("hoy", "mañana"), "en": ("today", "tomorrow")}[lg][1 if giorno == 1 else 0]
+    g = {"it": ("oggi", "domani"), "fr": ("aujourd'hui", "demain"), "es": ("hoy", "mañana"), "pt": ("hoje", "amanhã"), "en": ("today", "tomorrow")}[lg][1 if giorno == 1 else 0]
     return {"it": f"che tempo fa a {citta} {g}", "fr": f"quel temps fait-il à {citta} {g}",
-            "es": f"qué tiempo hace en {citta} {g}", "en": f"what's the weather in {citta} {g}"}[lg]
+            "es": f"qué tiempo hace en {citta} {g}", "pt": f"como está o tempo em {citta} {g}", "en": f"what's the weather in {citta} {g}"}[lg]

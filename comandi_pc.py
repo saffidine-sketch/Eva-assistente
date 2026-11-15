@@ -35,7 +35,7 @@ from pathlib import Path
 
 import vox_lingue as lingue
 
-LINGUE = ("it", "fr", "es", "en")
+LINGUE = ("it", "fr", "es", "en", "pt")
 SOLO_PROVA = False          # True = i comandi di sistema (spegni, riavvia, blocca...) non partono davvero (solo per le prove)
 CONFERMA_SECONDI = 15       # tempo per rispondere "sì" a una domanda di conferma
 
@@ -56,8 +56,8 @@ TABELLA = []
 def C(id, categoria, azione, it="", fr="", es="", en="", detto=None, pericoloso=False, cosa=None):
     """Aggiunge un comando alla tabella. it/fr/es/en: frasi separate da |."""
     frasi = {l: [f for f in (lingue.norm(x) for x in testo.split("|")) if f]
-             for l, testo in zip(LINGUE, (it, fr, es, en))}
-    raw = {l: [x.strip() for x in testo.split("|") if x.strip()] for l, testo in zip(LINGUE, (it, fr, es, en))}
+             for l, testo in zip(LINGUE, (it, fr, es, en, ""))}
+    raw = {l: [x.strip() for x in testo.split("|") if x.strip()] for l, testo in zip(LINGUE, (it, fr, es, en, ""))}
     TABELLA.append(Comando(id, categoria, azione, frasi, detto, pericoloso, cosa, raw))
 
 
@@ -432,6 +432,88 @@ C("svuota_cestino", "Sistema (pericoloso)", "svuota_cestino:",
   pericoloso=True, cosa=("svuotare il cestino", "vider la corbeille", "vaciar la papelera", "empty the recycle bin"),
   detto=("Cestino svuotato.", "Corbeille vidée.", "Papelera vaciada.", "Recycle bin emptied."))
 
+# ======================================================================
+# PORTOGHESE: frasi e risposte di ogni comando (stesso id della tabella sopra)
+#   id: (frasi separate da |, cosa si dice a voce, [cosa: solo per i comandi pericolosi])
+# ======================================================================
+_PT = {
+    "finestra_ingrandisci": ("maximiza a janela|maximiza esta janela|maximiza|amplia a janela|tela cheia|janela em tela cheia", "Janela maximizada."),
+    "finestra_riduci": ("minimiza a janela|minimiza esta janela|minimiza|reduz a janela|manda a janela para a barra", "Janela minimizada."),
+    "finestra_ripristina": ("restaura a janela|restaura esta janela|restaura|janela normal", "Janela restaurada."),
+    "finestra_chiudi": ("fecha esta janela|fecha a janela ativa|fecha a janela atual|fecha a janela|fechar esta janela", "Janela fechada."),
+    "finestra_successiva": ("próxima janela|janela seguinte|passa para a próxima janela|troca de janela|vai para a próxima janela", "Próxima janela."),
+    "finestra_precedente": ("janela anterior|passa para a janela anterior|volta para a janela anterior", "Janela anterior."),
+    "mostra_desktop": ("mostra a área de trabalho|mostrar área de trabalho|minimiza tudo|esconde todas as janelas|mostra o desktop", "Aqui está a área de trabalho."),
+    "affianca_sinistra": ("ajusta a janela à esquerda|janela à esquerda|encaixa à esquerda|põe a janela à esquerda", "Janela à esquerda."),
+    "affianca_destra": ("ajusta a janela à direita|janela à direita|encaixa à direita|põe a janela à direita", "Janela à direita."),
+    "apri_browser": ("abre o navegador|abre navegador|inicia o navegador|abre a internet", "Abro o navegador."),
+    "chiudi_browser": ("fecha o navegador|fecha navegador|fecha o chrome|fecha o edge|fecha o firefox", "Fecho o navegador."),
+    "apri_esplora": ("abre o explorador de arquivos|abre o explorador|abre explorador de arquivos|inicia o explorador", "Abro o Explorador de arquivos."),
+    "chiudi_esplora": ("fecha o explorador de arquivos|fecha o explorador|fecha todas as pastas", "Fecho o Explorador de arquivos."),
+    "apri_blocconote": ("abre o bloco de notas|abre bloco de notas|inicia o bloco de notas|abre o notepad", "Abro o Bloco de notas."),
+    "chiudi_blocconote": ("fecha o bloco de notas|fecha bloco de notas|fecha o notepad", "Fecho o Bloco de notas."),
+    "apri_calcolatrice": ("abre a calculadora|abre calculadora|inicia a calculadora", "Abro a Calculadora."),
+    "chiudi_calcolatrice": ("fecha a calculadora|fecha calculadora", "Fecho a Calculadora."),
+    "apri_impostazioni": ("abre as configurações|abre configurações|abre os ajustes|abre as configurações do windows", "Abro as Configurações."),
+    "chiudi_impostazioni": ("fecha as configurações|fecha configurações|fecha os ajustes", "Fecho as Configurações."),
+    "apri_documenti": ("abre documentos|abre os documentos|abre a pasta documentos|vai para documentos|abre meus documentos", "Abro Documentos."),
+    "apri_download": ("abre downloads|abre os downloads|abre a pasta downloads|vai para downloads|abre transferências", "Abro Downloads."),
+    "apri_desktop": ("abre a pasta área de trabalho|abre a área de trabalho|abre área de trabalho|abre o desktop", "Abro a Área de trabalho."),
+    "cartella_indietro": ("volta|volta atrás|vai atrás|pasta anterior|volta para a pasta anterior", "Voltando."),
+    "cartella_su": ("sobe um nível|pasta superior|vai para a pasta superior|sobe", "Subo um nível."),
+    "testo_copia": ("copia|copia isto|copia o texto|copia a seleção", "Copiado."),
+    "testo_incolla": ("cola|cola aqui|cola o texto|cola isso", "Colado."),
+    "testo_taglia": ("recorta|recorta isto|recorta o texto|recorta a seleção", "Recortado."),
+    "testo_seleziona_tutto": ("seleciona tudo|selecionar tudo|seleciona todo o texto", "Tudo selecionado."),
+    "testo_annulla": ("desfaz|desfazer|desfaz a última ação|desfaz a última alteração", "Desfeito."),
+    "testo_ripeti": ("refaz|refazer|refaz a ação|repete a ação", "Refeito."),
+    "testo_salva": ("salva|salva o arquivo|salvar|salva o documento|salva este arquivo", "Salvando."),
+    "scheda_nuova": ("nova aba|abre uma nova aba|abre uma aba", "Nova aba."),
+    "scheda_chiudi": ("fecha a aba|fecha esta aba|fecha aba|fecha a aba atual", "Aba fechada."),
+    "scheda_successiva": ("próxima aba|aba seguinte|passa para a próxima aba", "Próxima aba."),
+    "scheda_precedente": ("aba anterior|passa para a aba anterior|volta para a aba anterior", "Aba anterior."),
+    "browser_ricarica": ("recarrega a página|atualiza a página|recarrega|atualiza", "Recarregando."),
+    "browser_indietro": ("página anterior|volta para a página anterior|página atrás", "Página anterior."),
+    "browser_avanti": ("próxima página|vai em frente|avança|vai para a próxima página", "Próxima página."),
+    "volume_su": ("aumenta o volume|sobe o volume|mais alto|sobe o som", "Volume aumentado."),
+    "volume_giu": ("diminui o volume|abaixa o volume|reduz o volume|mais baixo|abaixa o som", "Volume diminuído."),
+    "audio_muto": ("silencia|silencia o áudio|tira o som|silenciar|silencia o som|muta", "Áudio silenciado."),
+    "audio_riattiva": ("ativa o som|reativa o som|tira o mudo|reativa o áudio|desmuta", "Áudio reativado."),
+    "schermata": ("captura de tela|faz uma captura de tela|faz uma captura|print da tela|screenshot|tira um print", "Captura salva em Imagens, Screenshots."),
+    "scorri_su": ("rola para cima|rola a página para cima|sobe a página|rola pra cima", "Rolo para cima."),
+    "scorri_giu": ("rola para baixo|rola a página para baixo|desce a página|rola pra baixo", "Rolo para baixo."),
+    "vai_inizio": ("vai para o início|ir para o início|vai para o topo|vai ao começo|vai ao início", "Ao início."),
+    "vai_fine": ("vai para o fim|ir para o fim|vai para o final|vai ao fim|vai ao final", "Ao final."),
+    "blocca_pc": ("bloqueia o pc|bloqueia o computador|bloqueia a tela|bloqueia a sessão", "Bloqueio o PC."),
+    "gestore_attivita": ("abre o gerenciador de tarefas|gerenciador de tarefas|abre o gerenciador de tarefas do windows", "Abro o Gerenciador de tarefas."),
+    "annulla_spegnimento": ("cancela o desligamento|cancela a reinicialização|cancela desligamento|anula o desligamento", "Desligamento cancelado."),
+    "spegni_pc": ("desliga o pc|desliga o computador|desliga o windows", "Desligo o PC em vinte segundos. Diga cancela o desligamento para me parar.", "desligar o PC"),
+    "riavvia_pc": ("reinicia o pc|reinicia o computador|reinicia|reinicia o windows", "Reinicio o PC em vinte segundos. Diga cancela a reinicialização para me parar.", "reiniciar o PC"),
+    "sospendi_pc": ("suspende o pc|põe o pc em suspensão|suspende o computador|suspende", "Suspendo o PC.", "suspender o PC"),
+    "esci_account": ("encerra a sessão|sai da conta|desconecta|fazer logoff|faz logoff", "Encerro a sessão.", "encerrar a sessão"),
+    "elimina": ("elimina|elimina isto|elimina o arquivo|elimina o item selecionado|apaga|apaga isto|apaga o arquivo", "Item eliminado.", "eliminar o item selecionado"),
+    "svuota_cestino": ("esvazia a lixeira|esvaziar a lixeira|esvazia a lixeira por favor", "Lixeira esvaziada.", "esvaziar a lixeira"),
+}
+
+
+def _applica_pt():
+    """Mette in ogni comando della tabella le frasi e le risposte in portoghese (e avvisa se ne manca qualcuna)."""
+    mancanti = [c.id for c in TABELLA if c.id not in _PT]
+    if mancanti:
+        raise RuntimeError("Comandi senza portoghese: " + ", ".join(mancanti))
+    for cmd in TABELLA:
+        voce = _PT[cmd.id]
+        testo, parlato = voce[0], voce[1]
+        cmd.frasi["pt"] = [x for x in (lingue.norm(p) for p in testo.split("|")) if x]
+        cmd.raw["pt"] = [p.strip() for p in testo.split("|") if p.strip()]
+        if cmd.detto:
+            cmd.detto = tuple(cmd.detto[:4]) + (parlato,)
+        if cmd.cosa and len(voce) > 2:
+            cmd.cosa = tuple(cmd.cosa[:4]) + (voce[2],)
+
+
+_applica_pt()
+
 
 # ======================================================================
 # Frasi generiche
@@ -440,33 +522,34 @@ def _l(d):
     return d.get(lingue.corrente) or d["it"]
 
 
-DETTO_OK = {"it": "Fatto.", "fr": "C'est fait.", "es": "Hecho.", "en": "Done."}
+DETTO_OK = {"it": "Fatto.", "fr": "C'est fait.", "es": "Hecho.", "pt": "Pronto.", "en": "Done."}
 DETTO_KO = {"it": "Non ci sono riuscita.", "fr": "Je n'y suis pas arrivée.", "es": "No lo he conseguido.",
-            "en": "I couldn't do it."}
+            "pt": "Não consegui.", "en": "I couldn't do it."}
 DETTO_NIENTE = {"it": "Non c'è nessuna finestra su cui agire.", "fr": "Il n'y a aucune fenêtre sur laquelle agir.",
-                "es": "No hay ninguna ventana sobre la que actuar.", "en": "There is no window to act on."}
+                "es": "No hay ninguna ventana sobre la que actuar.", "pt": "Não há nenhuma janela para agir.", "en": "There is no window to act on."}
 DETTO_NESSUNO_SPEGNIMENTO = {"it": "Non c'è nessuno spegnimento da annullare.", "fr": "Il n'y a aucune extinction à annuler.",
-                             "es": "No hay ningún apagado que cancelar.", "en": "There is no shutdown to cancel."}
+                             "es": "No hay ningún apagado que cancelar.", "pt": "Não há nenhum desligamento para cancelar.", "en": "There is no shutdown to cancel."}
 DETTO_NON_APERTO = {"it": "Non ho trovato niente da chiudere.", "fr": "Je n'ai rien trouvé à fermer.",
-                    "es": "No he encontrado nada que cerrar.", "en": "I found nothing to close."}
+                    "es": "No he encontrado nada que cerrar.", "pt": "Não encontrei nada para fechar.", "en": "I found nothing to close."}
 DOMANDA = {"it": "Vuoi davvero {cosa}? Dì sì per confermare, oppure no.",
            "fr": "Veux-tu vraiment {cosa} ? Dis oui pour confirmer, ou non.",
            "es": "¿De verdad quieres {cosa}? Di sí para confirmar, o no.",
+           "pt": "Você realmente quer {cosa}? Diga sim para confirmar, ou não.",
            "en": "Do you really want to {cosa}? Say yes to confirm, or no."}
 ANNULLATO = {"it": "Va bene, non faccio niente.", "fr": "D'accord, je ne fais rien.",
-             "es": "De acuerdo, no hago nada.", "en": "Alright, I'm not doing anything."}
+             "es": "De acuerdo, no hago nada.", "pt": "Certo, não faço nada.", "en": "Alright, I'm not doing anything."}
 SCADUTA = {"it": "Nessuna risposta: non faccio niente.", "fr": "Pas de réponse : je ne fais rien.",
-           "es": "Sin respuesta: no hago nada.", "en": "No answer: I'm not doing anything."}
+           "es": "Sin respuesta: no hago nada.", "pt": "Sem resposta: não faço nada.", "en": "No answer: I'm not doing anything."}
 
 
 def domanda_conferma(cmd):
     i = LINGUE.index(lingue.corrente)
-    return _l(DOMANDA).format(cosa=cmd.cosa[i] if cmd.cosa else cmd.id)
+    return _l(DOMANDA).format(cosa=cmd.cosa[i] if cmd.cosa and len(cmd.cosa) > i else cmd.id)
 
 
 def detto(cmd):
     i = LINGUE.index(lingue.corrente)
-    return cmd.detto[i] if cmd.detto else _l(DETTO_OK)
+    return cmd.detto[i] if cmd.detto and len(cmd.detto) > i else _l(DETTO_OK)
 
 
 # ======================================================================
@@ -478,11 +561,12 @@ _INIZIO = re.compile(
     r"s il te plait|s il vous plait|peux tu|peux tu me|pourrais tu|pourrais tu me|tu peux|vous pouvez|pouvez vous|"
     r"pouvez vous me|pourriez vous|pourriez vous me|maintenant|alors|"
     r"por favor|puedes|podrias|me puedes|me podrias|quiero que|ahora|entonces|pues|vale|"
+    r"por favor|pode|poderia|voce pode|voce poderia|quero que|queria que|agora|entao|vamos|"
     r"please|can you|could you|would you|will you|i want you to|i would like you to|i d like you to|now|just|"
     r"go ahead and)\s+)+")
 _FINE = re.compile(
     r"(?:\s+(?:per favore|per piacere|per cortesia|grazie|ora|adesso|s il te plait|s il vous plait|stp|svp|merci|"
-    r"maintenant|por favor|gracias|ahora|please|thanks|thank you|now))+$")
+    r"maintenant|por favor|gracias|ahora|please|thanks|thank you|now|pra mim|para mim|obrigado|obrigada))+$")
 
 _INDICE = {}                 # frase normalizzata -> comando (tutte le lingue)
 _FUZZY = []                  # (frase, comando) per il confronto approssimato
@@ -540,13 +624,14 @@ def trova(testo):
 _SI = {"si", "conferma", "confermo", "procedi", "ok", "okay", "certo", "va", "bene", "esegui", "vai", "fallo", "pure",
        "oui", "confirme", "je", "d", "accord", "vas", "y", "fais", "le", "procede", "bien", "sur",
        "vale", "confirma", "adelante", "hazlo", "de", "acuerdo", "claro", "por", "favor", "venga",
-       "yes", "yeah", "yep", "confirm", "i", "go", "ahead", "do", "it", "proceed", "sure", "please", "eva"}
+       "yes", "yeah", "yep", "confirm", "i", "go", "ahead", "do", "it", "proceed", "sure", "please", "eva",
+       "sim", "confirma", "pode", "faz", "faca", "pra", "frente", "vai", "isso", "mesmo", "favor"}
 _SI_CENTRO = {"si", "conferma", "confermo", "procedi", "ok", "okay", "certo", "esegui", "fallo", "oui", "confirme",
               "procede", "vale", "confirma", "adelante", "hazlo", "claro", "venga", "yes", "yeah", "yep", "confirm",
-              "proceed", "sure", "d", "accord"}
+              "proceed", "sure", "d", "accord", "sim", "confirma", "pode", "faz", "faca", "vai"}
 _NO = {"no", "non", "annulla", "annule", "anula", "cancela", "cancel", "stop", "nope", "niente", "nada", "rien",
        "nothing", "lascia", "stare", "perdere", "laisse", "tomber", "deja", "never", "mind", "ferma", "fermati",
-       "arrete", "para", "detente", "annuler", "cancelar"}
+       "arrete", "para", "detente", "annuler", "cancelar", "nao", "esquece", "deixa", "nunca", "pare"}
 
 
 def e_no(frase):

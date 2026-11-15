@@ -19,6 +19,7 @@ import datetime
 import difflib
 import json
 import logging
+import random
 import re
 import unicodedata
 from pathlib import Path
@@ -27,7 +28,7 @@ import eva_percorsi as percorsi
 FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 _log = logging.getLogger("eva")
 
-CODICI = ("it", "fr", "es", "en")
+CODICI = ("it", "fr", "es", "en", "pt")
 corrente = "it"
 
 
@@ -68,6 +69,15 @@ PACCHETTI = {
         "chiusura": ["adios", "hasta luego", "hasta pronto", "eso es todo", "he terminado", "ya termine",
                      "buenas noches", "cierra", "cierrate", "puedes irte", "descansa", "nos vemos", "chao"],
     },
+    "pt": {
+        "nome": "portoghese", "nome_in_lingua": "português", "whisper": "pt", "voce": "Maria", "cultura": "pt",
+        "lcid": ("416", "816"), "file_risposte": "risposte_pt.json",
+        "parole_suggerite": ["Eva", "abre", "fecha", "inicia", "pesquisa", "Chrome", "YouTube", "Gmail", "Bloco de notas",
+                             "Calculadora", "Documentos", "Downloads", "Área de trabalho", "aumenta o volume",
+                             "diminui o volume", "mudo", "tempo", "tchau", "sai da frente", "fala italiano", "me lembra", "lembrete"],
+        "chiusura": ["tchau", "ate logo", "ate breve", "e so isso", "terminei", "ja terminei", "boa noite",
+                     "fecha", "fecha tudo", "pode ir", "descansa", "adeus", "ate mais"],
+    },
     "en": {
         "nome": "inglese", "nome_in_lingua": "English", "whisper": "en", "voce": "Zira", "cultura": "en",
         "lcid": ("409", "809"), "file_risposte": "risposte_en.json",
@@ -78,6 +88,17 @@ PACCHETTI = {
                      "that s all", "i am done", "i m done", "good night", "you can go", "go away", "close"],
     },
 }
+
+
+# Piccolo suggerimento a Whisper con parole tipiche delle lingue di Eva (italiano, francese, spagnolo, inglese, portoghese): lo aiuta a sentire
+# bene anche quando si passa da una lingua all'altra. Resta corto: Whisper legge solo gli ultimi ~200 token.
+SUGGERIMENTO_MULTILINGUE = ("Eva. Ciao, apri, chiudi, cerca. Bonjour, ouvre, ferme, cherche. Hola, abre, cierra, busca. "
+                            "Hello, open, close, search. Olá, abre, fecha, pesquisa.")
+
+
+def codici_whisper():
+    """I codici delle lingue che Eva sa gestire (quelli tra cui Whisper sceglie nel rilevamento automatico)."""
+    return [p["whisper"] for p in PACCHETTI.values()]
 
 
 def pacchetto(lingua=None):
@@ -142,6 +163,24 @@ TESTI = {
         "chiudo_finestra": "Cierro la ventana.", "non_riesco_chiudere": "No consigo cerrarla.",
         "nessuna_finestra": "No hay ninguna ventana que cerrar.",
     },
+    "pt": {
+        "benvenuto": "Olá {nome}, como vai? Do que você precisa hoje?",
+        "caricamento": "Carregando...",
+        "errore_ascolto": "{nome}, tenho um problema e não consigo te ouvir. Veja o arquivo eva ponto log.",
+        "copia_in_corso": "Ainda estou trabalhando em uma cópia, {nome}. Diga cancela para parar.",
+        "groq_offline": "Não consigo me conectar à internet, {nome}. Sem isso não entendo este comando.",
+        "groq_errore": "O serviço de inteligência artificial não responde, {nome}. Tente de novo daqui a pouco.",
+        "meteo_chiedi_citta": "De qual cidade você quer o tempo, {nome}? Vou lembrar da próxima vez.",
+        "meteo_offline": "Não consigo me conectar à internet, {nome}: agora não posso dar a previsão do tempo.",
+        "meteo_non_trovata": "Não encontro a cidade {citta}. Tente dizer: como está o tempo em, e o nome da cidade.",
+        "meteo_errore": "O serviço de meteorologia não responde. Tente de novo daqui a pouco.",
+        "lingua_cambiata": "Certo, agora falo português.",
+        "ripeti_comando": "Repita o comando.",
+        "domanda_chiudi": "Quer que eu feche o navegador, a pasta ou a janela em primeiro plano?",
+        "chiudo_browser": "Fecho o navegador.", "chiudo_cartella": "Fecho a pasta.",
+        "chiudo_finestra": "Fecho a janela.", "non_riesco_chiudere": "Não consigo fechá-la.",
+        "nessuna_finestra": "Não há nenhuma janela para fechar.",
+    },
     "en": {
         "benvenuto": "Hello {nome}, how are you? What do you need today?",
         "caricamento": "Loading...",
@@ -163,6 +202,59 @@ TESTI = {
 }
 _DETTI_IT = {TESTI["it"][k]: k for k in ("chiudo_browser", "chiudo_cartella", "chiudo_finestra",
                                          "non_riesco_chiudere", "nessuna_finestra")}
+
+
+# Il benvenuto all'avvio: ironico e affettuoso, cambia ogni volta. La prima di ogni lista è quella "firma".
+BENVENUTI = {
+    "it": ["Eccomi, capo, cosa combiniamo oggi?",
+           "Eccomi qua, capo. Dimmi che hai un piano, anche solo un abbozzo.",
+           "Sono tutta orecchie, {nome}. Cosa combiniamo oggi?",
+           "Agli ordini, capo! Ma fai piano con le richieste impossibili.",
+           "Sveglia e operativa, {nome}. Tu hai già bevuto il caffè?",
+           "Rieccoci, {nome}! Cosa inventiamo oggi?",
+           "Eccomi, capo. Prometto di non giudicare le tue richieste. Troppo.",
+           "Presente, {nome}. Che si fa oggi: grandi imprese o piccole stranezze?"],
+    "fr": ["Me voici, chef, qu'est-ce qu'on mijote aujourd'hui ?",
+           "Me voilà, chef. Dis-moi que tu as un plan, même un petit brouillon.",
+           "Je suis tout ouïe, {nome}. On fait quoi aujourd'hui ?",
+           "À vos ordres, chef ! Mais doucement avec les demandes impossibles.",
+           "Réveillée et opérationnelle, {nome}. Et toi, tu as déjà pris ton café ?"],
+    "es": ["Aquí estoy, jefe, ¿qué tramamos hoy?",
+           "Aquí me tienes, jefe. Dime que tienes un plan, aunque sea un borrador.",
+           "Soy toda oídos, {nome}. ¿Qué hacemos hoy?",
+           "¡A sus órdenes, jefe! Pero con calma con las peticiones imposibles.",
+           "Despierta y operativa, {nome}. ¿Tú ya te has tomado el café?"],
+    "pt": ["Aqui estou, chefe, o que vamos aprontar hoje?",
+           "Cheguei, chefe. Diga que você tem um plano, nem que seja um rascunho.",
+           "Sou toda ouvidos, {nome}. O que vamos fazer hoje?",
+           "Às ordens, chefe! Mas pegue leve com os pedidos impossíveis.",
+           "Acordada e operacional, {nome}. Você já tomou o café?"],
+    "en": ["Here I am, boss, what are we getting into today?",
+           "Reporting for duty, boss. Please tell me you have a plan, even a rough one.",
+           "All ears, {nome}. What are we up to today?",
+           "At your service, boss! Go easy on the impossible requests, though.",
+           "Awake and operational, {nome}. Have you had your coffee yet?"],
+}
+
+
+def benvenuto(nome):
+    """Un benvenuto a caso nella lingua corrente, diverso da quello dell'ultimo avvio (ricordato in impostazioni_eva.json)."""
+    varianti = BENVENUTI.get(corrente) or []
+    if not varianti:
+        return t("benvenuto", nome=nome)
+    dati = _leggi_impostazioni()
+    ultimo = dati.get("ultimo_benvenuto")
+    scelte = [i for i in range(len(varianti)) if i != ultimo] or list(range(len(varianti)))
+    i = random.choice(scelte)
+    dati["ultimo_benvenuto"] = i
+    try:
+        FILE_IMPOSTAZIONI.write_text(json.dumps(dati, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+    try:
+        return varianti[i].format(nome=nome)
+    except (KeyError, IndexError):
+        return varianti[i]
 
 
 def t(chiave, **campi):
@@ -202,6 +294,14 @@ GROQ_CHAT = {
            "cerrar programas ni gestionar archivos: esos comandos los ejecuta el PC de @NOME@. Si @NOME@ te pide abrir "
            "o cerrar algo y la petición te llega a ti, responde de forma positiva e invítale a repetir el comando, "
            "por ejemplo «Claro, di: abre Chrome» o «cierra Chrome». Para lo demás puedes charlar libremente con @NOME@."),
+    "pt": ("Você é a Eva, a assistente de voz do PC com Windows de @NOME@. Responda sempre em português, de forma breve "
+           "(uma ou duas frases, no máximo 40 palavras), natural e adequada para ser lida em voz alta. Não use listas, "
+           "marcadores, tabelas, markdown, emojis nem símbolos. A Eva PODE abrir e fechar programas, gerenciar arquivos e "
+           "pastas (procurar, copiar, mover) e ditar texto com a tecla F9. Nunca responda que não pode abrir ou fechar "
+           "programas nem gerenciar arquivos: esses comandos são executados pelo PC de @NOME@. Se @NOME@ pedir para abrir "
+           "ou fechar algo e o pedido chegar até você, responda de forma positiva e convide a pessoa a repetir o comando, "
+           "por exemplo «Claro, diga: abre o Chrome» ou «fecha o Chrome». Quanto ao resto, você pode conversar "
+           "livremente com @NOME@."),
     "en": ("You are Eva, the voice assistant on @NOME@'s Windows PC. Always answer in English, briefly (one or two "
            "sentences, 40 words at most), naturally and in a way that is easy to read aloud. Do not use lists, bullet "
            "points, tables, markdown, emojis or symbols. Eva CAN open and close programs, manage files and folders "
@@ -214,10 +314,11 @@ GROQ_CHAT = {
 
 # Esempi per "cosa sai fare?" (aiuto.py): cambio lingua
 ESEMPI = {
-    "it": ["parla francese", "parla inglese", "parla spagnolo", "parla italiano"],
-    "fr": ["parle français", "parle anglais", "parle espagnol", "parle italien"],
-    "es": ["habla francés", "habla inglés", "habla español", "habla italiano"],
-    "en": ["speak French", "speak English", "speak Spanish", "speak Italian"],
+    "it": ["parla francese", "parla inglese", "parla spagnolo", "parla portoghese", "parla italiano"],
+    "fr": ["parle français", "parle anglais", "parle espagnol", "parle portugais", "parle italien"],
+    "es": ["habla francés", "habla inglés", "habla español", "habla portugués", "habla italiano"],
+    "en": ["speak French", "speak English", "speak Spanish", "speak Portuguese", "speak Italian"],
+    "pt": ["fala francês", "fala inglês", "fala espanhol", "fala português", "fala italiano"],
 }
 
 
@@ -233,7 +334,7 @@ def groq_ordini_extra():
     if corrente == "it":
         return ""
     p = PACCHETTI[corrente]
-    return ("\nLa frase può essere in italiano, francese, spagnolo o inglese (di solito in " + p["nome"] + "). "
+    return ("\nLa frase può essere in italiano, francese, spagnolo, inglese o portoghese (di solito in " + p["nome"] + "). "
             "I nomi di programmi e cartelle vanno lasciati come sono detti. Il campo \"domanda\" (azione \"chiarisci\") "
             "va scritto nella lingua " + p["nome"] + ", non in italiano.")
 
@@ -245,6 +346,7 @@ _ART = {
     "en": r"(?:the|a|an|my|up)",
     "fr": r"(?:le|la|les|l|un|une|mon|ma|mes|du|des)",
     "es": r"(?:el|la|los|las|un|una|mi|mis)",
+    "pt": r"(?:o|a|os|as|um|uma|meu|minha|meus|minhas)",
 }
 _RIEMPITIVI_INIZIO = {
     "en": r"(?:eva|please|can you|could you|would you|will you|i want you to|i would like you to|i d like you to|"
@@ -253,11 +355,13 @@ _RIEMPITIVI_INIZIO = {
           r"pouvez vous|pouvez vous me|voulez vous|pourriez vous|pourriez vous me|"
           r"je veux que tu|je voudrais que tu|maintenant|alors|ensuite|dis|voudrais tu)",
     "es": r"(?:eva|por favor|puedes|podrias|me puedes|me podrias|quiero que|quisiera que|ahora|entonces|pues|vale)",
+    "pt": r"(?:eva|por favor|pode|poderia|voce pode|voce poderia|quero que|queria que|gostaria que|agora|entao|vamos)",
 }
 _RIEMPITIVI_FINE = {
     "en": r"(?:please|for me|now|thanks|thank you)",
     "fr": r"(?:s il te plait|s il vous plait|stp|svp|pour moi|maintenant|merci)",
     "es": r"(?:por favor|para mi|ahora|gracias)",
+    "pt": r"(?:por favor|pra mim|para mim|agora|obrigado|obrigada)",
 }
 _VERBI = {
     "en": {"apri": r"(?:open|launch|start|run|show me|show)", "chiudi": r"(?:close|shut down|shut|quit|exit)",
@@ -268,15 +372,20 @@ _VERBI = {
     "es": {"apri": r"(?:abre|abrir|abres|abran|abra|lanza|lanzar|inicia|iniciar|ejecuta|ejecutar|muestra|muestrame)",
            "chiudi": r"(?:cierra|cerrar|cierras|cierre|sal de|salir de)",
            "cerca": r"(?:busca|buscar|buscame|encuentra|encontrar)"},
+    "pt": {"apri": r"(?:abre|abrir|abra|abres|inicia|iniciar|executa|executar|lanca|lancar|mostra|mostre|me mostra)",
+           "chiudi": r"(?:fecha|fechar|feche|sai de|sair de|encerra|encerrar)",
+           "cerca": r"(?:pesquisa|pesquisar|pesquise|procura|procurar|procure|busca|buscar|busque|encontra|encontrar)"},
 }
-_E = {"en": r"(?:and|and then|then)", "fr": r"(?:et|et puis|puis|et ensuite)", "es": r"(?:y|e|y luego|luego|despues)"}
-_CARTELLA = {"en": r"(?:folder|directory)", "fr": r"(?:dossier|repertoire)", "es": r"(?:carpeta|directorio)"}
-_FILE = {"en": r"(?:file|document)", "fr": r"(?:fichier|document)", "es": r"(?:archivo|fichero|documento)"}
+_E = {"en": r"(?:and|and then|then)", "fr": r"(?:et|et puis|puis|et ensuite)", "es": r"(?:y|e|y luego|luego|despues)",
+      "pt": r"(?:e|e depois|depois|e entao)"}
+_CARTELLA = {"en": r"(?:folder|directory)", "fr": r"(?:dossier|repertoire)", "es": r"(?:carpeta|directorio)", "pt": r"(?:pasta|diretorio)"}
+_FILE = {"en": r"(?:file|document)", "fr": r"(?:fichier|document)", "es": r"(?:archivo|fichero|documento)", "pt": r"(?:arquivo|ficheiro|documento)"}
 _BROWSER = {"en": r"(?:browser|chrome|edge|firefox|brave|opera|internet|google)",
             "fr": r"(?:navigateur|chrome|edge|firefox|brave|opera|internet|google)",
-            "es": r"(?:navegador|chrome|edge|firefox|brave|opera|internet|google)"}
+            "es": r"(?:navegador|chrome|edge|firefox|brave|opera|internet|google)",
+            "pt": r"(?:navegador|browser|chrome|edge|firefox|brave|opera|internet|google)"}
 _FINESTRA = {"en": r"(?:window|this window|the window)", "fr": r"(?:fenetre|cette fenetre)",
-             "es": r"(?:ventana|esta ventana)"}
+             "es": r"(?:ventana|esta ventana)", "pt": r"(?:janela|esta janela|a janela)"}
 
 # nomi di programmi e cartelle che Eva conosce in italiano
 _ALIAS = {
@@ -294,6 +403,12 @@ _ALIAS = {
            "descargas": "scaricati", "escritorio": "desktop", "imagenes": "immagini", "fotos": "foto",
            "musica": "musica", "videos": "video", "configuracion": "impostazioni", "calendario": "calendario",
            "correo": "posta", "camara": "fotocamera"},
+    "pt": {"bloco de notas": "blocco note", "bloco notas": "blocco note", "calculadora": "calcolatrice",
+           "explorador": "esplora risorse", "explorador de arquivos": "esplora risorse", "documentos": "documenti",
+           "downloads": "scaricati", "transferencias": "scaricati", "area de trabalho": "desktop",
+           "imagens": "immagini", "fotos": "foto", "musica": "musica", "videos": "video",
+           "configuracoes": "impostazioni", "calendario": "calendario", "email": "posta", "correio": "posta",
+           "camera": "fotocamera"},
 }
 
 # come Eva DICE a voce i nomi (nel catalogo i programmi hanno nome italiano)
@@ -310,6 +425,10 @@ _NOMI_VISIBILI = {
            "documenti": "Documents", "scaricati": "Downloads", "desktop": "the Desktop", "immagini": "Pictures",
            "foto": "Photos", "musica": "Music", "video": "Videos", "impostazioni": "Settings",
            "calendario": "the Calendar", "posta": "Mail", "fotocamera": "the Camera"},
+    "pt": {"blocco note": "o Bloco de notas", "calcolatrice": "a Calculadora", "esplora risorse": "o Explorador",
+           "documenti": "Documentos", "scaricati": "Downloads", "desktop": "a Área de trabalho", "immagini": "Imagens",
+           "foto": "Fotos", "musica": "Música", "video": "Vídeos", "impostazioni": "Configurações",
+           "calendario": "o Calendário", "posta": "o E-mail", "fotocamera": "a Câmera"},
 }
 
 
@@ -362,10 +481,24 @@ _FRASI = {
         (r"escondete|ocultate|desaparece", "nasconditi"),
         (r"(?:ponte|muevete|mueve) (?:en|arriba|abajo)?\s*(arriba|abajo)\s*(?:a la\s+)?(izquierda|derecha)", "sposta in {0} a {1}"),
     ],
+    "pt": [
+        (r"(?:aumenta|sobe|aumentar|subir|coloca mais alto)\s+(?:o\s+)?(?:volume|som)|mais alto|volume mais alto|mais forte", "alza il volume"),
+        (r"(?:diminui|abaixa|reduz|diminuir|abaixar|reduzir)\s+(?:o\s+)?(?:volume|som)|mais baixo|volume mais baixo", "abbassa il volume"),
+        (r"silencia(?:r)?(?:\s+(?:o\s+)?(?:som|audio))?|tira (?:o )?som|desliga (?:o )?som|muta(?:r)?|mudo", "muto"),
+        (r"(?:ativa|reativa|liga|restabelece)\s+(?:o\s+)?(?:som|audio)|tira (?:o )?mudo|desmuta(?:r)?", "togli il muto"),
+        (r"(?:coloca\s+|poe\s+)?(?:o\s+)?volume\s+(?:a|em|no)?\s*(\d{1,3})(?:\s*(?:por cento|%))?", "volume al {0}"),
+        (r"volta|volta atras|vai atras|pasta anterior", "torna indietro"),
+        (r"sobe um nivel|pasta superior|pasta pai|sobe", "vai su"),
+        (r"sai da frente|sai do caminho|fica de lado|fica ao lado|poe se de lado|afasta te|fica pequena|encolhe", "mettiti da parte"),
+        (r"(?:vem|fica|volta) (?:para )?(?:o )?centro|vem aqui|fica grande|aumenta te", "mettiti al centro"),
+        (r"esconde te|esconda se|some|desaparece|oculta te", "nasconditi"),
+        (r"(?:vai|move|poe se|fica) (?:para )?(?:o |a )?(?:canto )?(?:em )?(cima|baixo)\s*(?:a |na |no )?(esquerda|direita)", "sposta in {0} a {1}"),
+    ],
 }
 _DIREZIONI = {"top": "alto", "upper": "alto", "bottom": "basso", "lower": "basso", "left": "sinistra", "right": "destra",
               "haut": "alto", "bas": "basso", "gauche": "sinistra", "droite": "destra",
-              "arriba": "alto", "abajo": "basso", "izquierda": "sinistra", "derecha": "destra"}
+              "arriba": "alto", "abajo": "basso", "izquierda": "sinistra", "derecha": "destra",
+              "cima": "alto", "acima": "alto", "baixo": "basso", "abaixo": "basso", "esquerda": "sinistra", "direita": "destra"}
 
 
 def _togli_articoli(s, lingua):
@@ -378,11 +511,11 @@ def _oggetto(o, lingua):
     uscita = []
     for p in parti:
         p = _togli_articoli(p, lingua)
-        m = re.match(rf"^{_CARTELLA[lingua]}\s+(?:(?:{_ART[lingua]}|de|di|of|del|de la|de l)\s+)*(.+)$", p)
+        m = re.match(rf"^{_CARTELLA[lingua]}\s+(?:(?:{_ART[lingua]}|de|di|of|del|de la|de l|do|da|dos|das)\s+)*(.+)$", p)
         if m:
             uscita.append("la cartella " + _alias(m.group(1), lingua))
             continue
-        m = re.match(rf"^{_FILE[lingua]}\s+(?:(?:{_ART[lingua]}|de|di|of|del|de la|de l)\s+)*(.+)$", p)
+        m = re.match(rf"^{_FILE[lingua]}\s+(?:(?:{_ART[lingua]}|de|di|of|del|de la|de l|do|da|dos|das)\s+)*(.+)$", p)
         if m:
             uscita.append("il file " + m.group(1))
             continue
@@ -434,13 +567,13 @@ def verso_italiano(testo, lingua=None):
     if m:
         o = m.group(1)
         motore = ""
-        m2 = re.match(rf"^(.+?)\s+(?:on|sur|en|in)\s+(youtube|google)$", o)
+        m2 = re.match(rf"^(.+?)\s+(?:on|sur|en|in|no|na)\s+(youtube|google)$", o)
         if m2:
             o, motore = m2.group(1), m2.group(2)
-        m3 = re.match(rf"^(?:on|sur|en|in)\s+(youtube|google)\s+(?:for\s+|pour\s+|de\s+|sobre\s+)?(.+)$", o)
+        m3 = re.match(rf"^(?:on|sur|en|in|no|na)\s+(youtube|google)\s+(?:for\s+|pour\s+|de\s+|sobre\s+|por\s+|pelo\s+)?(.+)$", o)
         if m3:
             motore, o = m3.group(1), m3.group(2)
-        o = re.sub(rf"^(?:for|pour|de|sobre|about)\s+", "", o).strip()
+        o = re.sub(rf"^(?:for|pour|de|sobre|about|por)\s+", "", o).strip()
         return "cerca " + (f"su {motore} " if motore else "") + o
     return None
 
@@ -451,18 +584,20 @@ def verso_italiano(testo, lingua=None):
 _NOMI_LINGUA = {
     "it": {"italiano", "italiana", "italian", "italien", "italienne", "italiana"},
     "fr": {"francese", "french", "francais", "francaise", "frances", "francesa", "francese"},
-    "es": {"spagnolo", "spanish", "espagnol", "espanol", "espanola", "castellano"},
+    "es": {"spagnolo", "spanish", "espagnol", "espanol", "espanola", "castellano", "espanhol"},
+    "pt": {"portoghese", "portuguese", "portugais", "portugues", "portuguesa", "brasiliano", "brasileiro"},
     "en": {"inglese", "english", "anglais", "ingles", "inglesa", "anglaise"},
 }
 _VERBI_CAMBIO = {"parla", "parlare", "parlami", "parli", "parlate", "rispondi", "rispondimi", "cambia", "cambiare",
                  "passa", "passare", "metti", "imposta", "lingua", "usa", "usare",
                  "parle", "parlez", "reponds", "repondre", "change", "changer", "passe", "mets", "langue", "utilise",
                  "habla", "hablar", "hablame", "responde", "responder", "cambiar", "pasa", "pon", "idioma", "usa",
-                 "speak", "talk", "answer", "reply", "switch", "set", "language", "respond", "use", "go", "say"}
+                 "speak", "talk", "answer", "reply", "switch", "set", "language", "respond", "use", "go", "say",
+                 "fala", "falar", "fale", "muda", "mudar", "mude", "troca", "trocar", "troque", "responda", "lingua"}
 _SALTA = {"eva", "vox", "per", "favore", "please", "por", "favor", "s", "il", "te", "plait", "vous", "pure", "ora",
           "adesso", "now", "ahora", "maintenant", "can", "you", "could", "puoi", "puedes", "peux", "tu", "pouvez",
           "to", "in", "en", "a", "au", "al", "the", "la", "le", "el", "di", "de", "del", "mi", "me", "moi", "with",
-          "con", "avec", "dans"}
+          "con", "avec", "dans", "em", "para", "por", "favor", "pode", "agora", "o", "a", "no", "na"}
 
 
 def _e_nome_lingua(tok, nomi):
@@ -490,7 +625,7 @@ def riconosci_cambio(testo):
                     significativi = [p for p in toks if p not in _SALTA]
                     if any(p in _VERBI_CAMBIO for p in significativi[:2]):
                         return codice
-                if len(toks) <= 3 and prima and prima[0] in ("in", "en", "au", "a"):
+                if len(toks) <= 3 and prima and prima[0] in ("in", "en", "au", "a", "em", "para"):
                     return codice
     return None
 
@@ -578,6 +713,7 @@ def file_risposte(cartella):
 _GIORNI = {
     "fr": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
     "es": ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
+    "pt": ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"],
     "en": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
 }
 _MESI = {
@@ -585,6 +721,8 @@ _MESI = {
            "novembre", "décembre"],
     "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
            "noviembre", "diciembre"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
+           "novembro", "dezembro"],
     "en": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
            "November", "December"],
 }
@@ -606,6 +744,13 @@ def frase_ora(adesso=None):
             return "Es mediodía"
         h12 = h % 12 or 12
         return ("Es la una" if h12 == 1 else f"Son las {h12}") + (f" y {m}" if m else " en punto")
+    if corrente == "pt":
+        if h == 0 and m == 0:
+            return "É meia-noite"
+        if h == 12 and m == 0:
+            return "É meio-dia"
+        base = "É meia-noite" if h == 0 else ("É meio-dia" if h == 12 else ("É uma hora" if h == 1 else f"São {h} horas"))
+        return base + (f" e {m} minuto{'s' if m > 1 else ''}" if m else "")
     if corrente == "en":
         if h == 0 and m == 0:
             return "It's midnight"
@@ -622,6 +767,8 @@ def frase_data(oggi=None):
         return f"{_GIORNI['fr'][oggi.weekday()]} {'1er' if g == 1 else g} {_MESI['fr'][mese - 1]} {a}"
     if corrente == "es":
         return f"{_GIORNI['es'][oggi.weekday()]} {g} de {_MESI['es'][mese - 1]} de {a}"
+    if corrente == "pt":
+        return f"{_GIORNI['pt'][oggi.weekday()]}, {'primeiro' if g == 1 else g} de {_MESI['pt'][mese - 1]} de {a}"
     if corrente == "en":
         return f"{_GIORNI['en'][oggi.weekday()]}, {_MESI['en'][mese - 1]} {g}, {a}"
     return None
@@ -633,6 +780,8 @@ def saluto_per_ora(adesso=None):
         return "Bonjour" if 5 <= h < 18 else ("Bonsoir" if 18 <= h < 22 else "Salut")
     if corrente == "es":
         return "Buenos días" if 5 <= h < 13 else ("Buenas tardes" if 13 <= h < 21 else "Hola")
+    if corrente == "pt":
+        return "Bom dia" if 5 <= h < 12 else ("Boa tarde" if 12 <= h < 18 else ("Boa noite" if 18 <= h < 22 else "Olá"))
     if corrente == "en":
         return "Good morning" if 5 <= h < 13 else ("Good afternoon" if 13 <= h < 18 else ("Good evening" if 18 <= h < 22 else "Hello"))
     return None
@@ -652,6 +801,12 @@ METEO = {
            "fine": {"hoy", "manana", "ahora", "esta", "para", "pasado", "hace"},
            "domani": "manana", "non_citta": {"que", "tiempo", "hace", "el", "la", "los", "mi", "aqui", "mi", "hoy",
                                              "manana", "ahora", "clima", "lluvia"}},
+    "pt": {"chiave": r"\b(clima|previsao|previsoes|chove|chover|vai chover|chuva|como esta o tempo|como esta o clima|que tempo faz|tempo faz|qual a temperatura|temperatura)\b",
+           "prep": r"\b(?:em|de|para|no|na|do|da)\s+([a-z]+(?:\s+[a-z]+){0,3})",
+           "fine": {"hoje", "amanha", "agora", "esta", "para", "depois", "faz", "como"},
+           "domani": "amanha", "non_citta": {"que", "tempo", "faz", "o", "a", "os", "as", "meu", "minha", "aqui", "hoje",
+                                             "amanha", "agora", "clima", "chuva", "como", "esta", "qual", "temperatura",
+                                             "previsao", "do"}},
     "en": {"chiave": r"\b(weather|forecast|rain|raining|going to rain|will it rain|temperature outside)\b",
            "prep": r"\b(?:in|for|at|of|near)\s+([a-z]+(?:\s+[a-z]+){0,3})",
            "fine": {"today", "tomorrow", "now", "tonight", "this", "for", "like", "please", "right"},
@@ -679,6 +834,13 @@ _CIELO = {
            "neve_forte": "nieve fuerte", "nevischio": "aguanieve", "rovesci": "chubascos",
            "rovesci_forti": "chubascos fuertes", "rovesci_neve": "chubascos de nieve", "temporale": "tormenta",
            "temporale_grandine": "tormenta con granizo"},
+    "pt": {"sereno": "céu limpo", "quasi_sereno": "predominantemente limpo", "parz": "parcialmente nublado",
+           "coperto": "nublado", "nebbia": "neblina", "pioggerella": "garoa", "pioggerella_gelata": "garoa congelante",
+           "pioggia_leggera": "chuva leve", "pioggia": "chuva", "pioggia_forte": "chuva forte",
+           "pioggia_gelata": "chuva congelante", "neve_leggera": "neve leve", "neve": "neve",
+           "neve_forte": "neve forte", "nevischio": "aguaneve", "rovesci": "pancadas de chuva",
+           "rovesci_forti": "pancadas fortes de chuva", "rovesci_neve": "pancadas de neve", "temporale": "tempestade",
+           "temporale_grandine": "tempestade com granizo"},
     "en": {"sereno": "clear", "quasi_sereno": "mostly clear", "parz": "partly cloudy", "coperto": "overcast",
            "nebbia": "fog", "pioggerella": "drizzle", "pioggerella_gelata": "freezing drizzle",
            "pioggia_leggera": "light rain", "pioggia": "rain", "pioggia_forte": "heavy rain",
@@ -704,6 +866,9 @@ METEO_ISTRUZIONE = {
     "es": ("Resume en voz alta, en UNA frase breve y natural en español (temperatura, cielo, lluvia), estos datos del "
            "tiempo ya verificados. Escribe los números y las unidades con palabras (grados, por ciento), sin símbolos "
            "como ° o %. No añadas datos que no estén y no digas que no puedes: "),
+    "pt": ("Resuma em voz alta, em UMA frase breve e natural em português (temperatura, céu, chuva), estes dados "
+           "meteorológicos já verificados. Escreva os números e as unidades por extenso (graus, por cento), sem "
+           "símbolos como ° ou %. Não acrescente dados que não existam e não diga que não pode: "),
     "en": ("Summarize aloud, in ONE short and natural sentence in English (temperature, sky, rain), this already "
            "verified weather data. Write numbers and units in words (degrees, percent), without symbols like ° or %. "
            "Do not add data that isn't there and do not say you can't: "),
@@ -711,7 +876,7 @@ METEO_ISTRUZIONE = {
 
 
 def frase_meteo_locale(dati):
-    """Frase di ripiego (se Groq non risponde) per fr, es, en. `dati` come da vox_meteo.cerca."""
+    """Frase di ripiego (se Groq non risponde) per fr, es, pt, en. `dati` come da vox_meteo.cerca."""
     quando_ora = dati["giorno"] == "oggi"
     c, tmax, tmin, pr = dati["citta"], dati["temp_max"], dati["temp_min"], dati.get("prob_pioggia")
     ora_t = dati.get("temp_ora")
@@ -726,6 +891,11 @@ def frase_meteo_locale(dati):
         s += (f"ahora {ora_t} grados, máxima de {tmax}. " if ora_t is not None
               else f"entre {tmin} y {tmax} grados. ")
         return s + ("Lluvia poco probable." if pr is None or pr < 20 else f"Probabilidad de lluvia {pr} por ciento.")
+    if corrente == "pt":
+        s = f"Em {c} {'hoje' if quando_ora else 'amanhã'}: {cielo_txt}, "
+        s += (f"agora {ora_t} graus, máxima de {tmax}. " if ora_t is not None
+              else f"entre {tmin} e {tmax} graus. ")
+        return s + ("Chuva pouco provável." if pr is None or pr < 20 else f"Probabilidade de chuva de {pr} por cento.")
     s = f"In {c} {'today' if quando_ora else 'tomorrow'}: {cielo_txt}, "
     s += (f"now {ora_t} degrees, high of {tmax}. " if ora_t is not None
           else f"between {tmin} and {tmax} degrees. ")

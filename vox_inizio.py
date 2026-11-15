@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 import eva_percorsi as percorsi
+import profilo                                    # il nome vale anche per il profilo (Impostazioni, menu accanto all'orologio)
 FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 VARIABILE = "GROQ_API_KEY"
 _REGISTRO = "Environment"                     # HKEY_CURRENT_USER\Environment: le variabili d'ambiente dell'utente
@@ -31,7 +32,7 @@ def _leggi():
 
 
 def nome_salvato():
-    return str(_leggi().get("nome_utente", "") or "").strip()
+    return (profilo.nome() or str(_leggi().get("nome_utente", "") or "")).strip()
 
 
 def pulisci_nome(testo):
@@ -43,6 +44,7 @@ def salva_nome(nome):
     d = _leggi()
     d["nome_utente"] = nome
     FILE_IMPOSTAZIONI.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    profilo.salva(nome=nome)                       # un solo nome per tutto Eva
 
 
 # ----------------------------------------------------------------------

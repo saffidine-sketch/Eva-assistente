@@ -26,3 +26,10 @@ alias_utente.json
 correzioni.json
 appunti.json
 promemoria.json
+
+# Dati personali creati da Eva (restano sul PC; nel pacchetto ci sono solo i file .esempio.json)
+memoria_eva.json
+profilo_eva.json
+eva_memoria_sessioni.json
+alias_cartelle.json
+operazioni.log

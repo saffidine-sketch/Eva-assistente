@@ -117,7 +117,9 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
     rubrica.json          Contatti per le mail.
     appunti.json          I tuoi appunti ("prendi nota ..."). Dati personali: non va mai pubblicato.
     promemoria.json       Promemoria, timer e sveglie ancora da annunciare (si crea da solo).
-    impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo).
+    impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo). Voce facoltativa "parole_extra":
+                          ["nome", ...] = parole TUE da suggerire a Whisper (la tua città, un nome che sente male). Resta sul
+                          tuo PC, non nel codice pubblico. Massimo 20 parole; si legge a ogni avvio.
     indice_cartelle.json  Indice delle tue cartelle e file (si aggiorna da solo).
     non_trovati.txt       Cose chieste e non trovate.
   Registri (log)
@@ -253,15 +255,15 @@ REGISTRO DELLE MODIFICHE
   - Trascrizione "vuota" a riposo con 0,01 s: è normale. Il rilevatore di volume scatta anche con rumori (colpi,
     ronzii, tastiera); il filtro delle pause di Whisper non trova parlato e non fa nemmeno la trascrizione.
 =====================================================================
-LINGUE (italiano, francese, spagnolo, inglese) - 06/11/2026
+LINGUE (italiano, francese, spagnolo, inglese, portoghese) - 06/11/2026
 =====================================================================
-  Cambiare lingua a voce:  "Eva, parla francese" / "Eva, speak English" / "Eva, habla español" / "Eva, parle italien" /
+  Cambiare lingua a voce:  "Eva, parla francese" / "Eva, speak English" / "Eva, habla español" / "Eva, fala português" / "Eva, parle italien" /
                            "Eva, cambia lingua in spagnolo" / "switch to French" / "passe en anglais".
   La scelta si SALVA in impostazioni_eva.json (chiave "lingua") e vale anche al prossimo avvio. La lingua di partenza,
   se non c'è niente salvato, è LINGUA in cima a dettatura.py. Per tornare a quella: cancella la chiave "lingua".
   Per ogni lingua cambiano INSIEME:
     - la trascrizione del microfono (lingua e parole suggerite a Whisper);
-    - la voce di Windows (Elsa italiano, Hortense francese, Helena spagnolo, Zira inglese; si cambiano con VOCI_LINGUE
+    - la voce di Windows (Elsa italiano, Hortense francese, Helena spagnolo, Zira inglese, Maria portoghese (va installata da Impostazioni di Windows); si cambiano con VOCI_LINGUE
       in dettatura.py);
     - i comandi: open/ouvre/abre = apri, close/ferme/cierra = chiudi, search/cherche/busca = cerca, volume up/monte le
       volume/sube el volumen, move aside/mets-toi de côté/ponte a un lado, ecc. Eva li traduce nei comandi interni
@@ -288,7 +290,7 @@ LINGUE (italiano, francese, spagnolo, inglese) - 06/11/2026
 LIBRERIA DEI COMANDI PER IL PC (comandi_pc.py) - 06/11/2026
 =====================================================================
   Tabella unica, facile da ampliare: ogni comando e' UNA riga C(...) in comandi_pc.py, con azione, frasi in italiano,
-  francese, spagnolo e inglese (varianti naturali comprese) e la frase che Eva dice dopo. Per aggiungerne uno basta
+  francese, spagnolo, inglese e portoghese (varianti naturali comprese) e la frase che Eva dice dopo. Per aggiungerne uno basta
   copiare una riga e cambiare id, azione e frasi (il file spiega i tipi di azione in cima). 56 comandi, 9 categorie.
   Prima del confronto Eva toglie "per favore", "puoi", "can you", "peux-tu", "por favor"... davanti e dietro.
   FINESTRE      ingrandisci / riduci a icona / ripristina / chiudi questa finestra / finestra successiva e precedente /

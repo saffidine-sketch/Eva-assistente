@@ -14,6 +14,7 @@ cercano, regolano il volume e preparano bozze.
 import collections
 import difflib
 import datetime as dt
+import json
 import os
 import queue
 import re
@@ -22,23 +23,53 @@ import time
 
 import numpy as np
 
+import eva_percorsi as percorsi
 import eva_registro as registro
 import vox_cervello as cervello
 import vox_file
 import vox_ia_azioni as ia_azioni
 import aiuto
+import appunti
 import comandi_pc
 import memoria
+import memoria_sessioni
+import profilo
 import promemoria
 import utilita
+import vox_incerte
 import vox_lingue as lingue
 import vox_operazioni as operazioni
+import vox_provider as provider
+import vox_vista
 from azioni import MAX_PAROLE_OGGETTO, Risultato, _norm_token, chiudi_finestra, interpreta
 from comandi import ARTICOLI, normalizza
 from vox_voce import Voce
 
 FREQ = 16000            # campioni al secondo
 BLOCCO = 480            # 30 millisecondi
+PAROLE_EXTRA_MAX = 20   # al massimo quante parole "tue" aggiungo al suggerimento di Whisper (il prompt ha un limite)
+
+
+def parole_extra():
+    """Parole TUE da suggerire a Whisper (la tua città, un nome che sente male): la voce facoltativa "parole_extra" di
+    impostazioni_eva.json, un file che resta sul tuo PC e non finisce nel repository. Se manca o non è valida: nessuna."""
+    try:
+        dati = json.loads(percorsi.dati("impostazioni_eva.json").read_text(encoding="utf-8-sig"))
+        voci = dati.get("parole_extra", []) if isinstance(dati, dict) else []
+    except (OSError, ValueError):
+        return []
+    if not isinstance(voci, list):
+        return []
+    pulite = [" ".join(str(v).split()) for v in voci if isinstance(v, (str, int, float))]
+    return [v for v in pulite if 1 < len(v) <= 40][:PAROLE_EXTRA_MAX]
+
+
+def testo_suggerimento(parole, nomi=()):
+    """Il testo che Eva passa a Whisper (initial_prompt): le parole del programma, le tue, e i nomi delle cartelle."""
+    testo = ", ".join(list(parole) + parole_extra()) + "."
+    if nomi:
+        testo += " " + ", ".join(nomi) + "."
+    return testo
 
 
 # ----------------------------------------------------------------------
@@ -174,6 +205,10 @@ class Vox:
         self.log = log
         lingua = lingue.inizializza(imp)                 # lingua salvata (o LINGUA): voce, parole suggerite, chiusura
         log(f"Lingua: {lingue.pacchetto()['nome']} ({lingua}) | voce {imp['VOCE_NOME']} | trascrizione {lingue.codice_whisper()}")
+        try:                                             # memoria persistente: appunti e ricordi, riletti a ogni avvio
+            log(f"Memoria persistente: {len(appunti.carica(forza=True))} voci in {appunti._file()}")
+        except Exception:
+            log.errore("Non riesco a leggere la memoria persistente")
         self.eventi = queue.Queue()
         self.livello = 0.0                   # volume del microfono, 0..1
         self.pronto = False
@@ -191,13 +226,19 @@ class Vox:
         self._t_audio_attivo = 0.0
         self._compagna = bool(imp.get("COMPAGNA", False))   # modalità compagna (dettatura.py: COMPAGNA)
         cervello.COMPAGNA = self._compagna
+        cervello.AGENTE_RICERCA = bool(imp.get("AGENTE_RICERCA", True))   # Groq può cercare su internet (vox_agente.py)
+        try:
+            log("Agente: " + (cervello.vox_agente.stato() if cervello.AGENTE_RICERCA else "spento (AGENTE_RICERCA = False)"))
+        except Exception:
+            pass
+        provider.configura(imp)                              # PROVIDER: "groq" (predefinito) o "deepseek" (dettatura.py)
         self._vista = "chiusa"               # aspetto della sfera: grande | ridotta | nascosta | chiusa
         self._riduci_tra = None              # quando rimpicciolire la sfera dopo una risposta senza aperture
         self._motivo_riduci = ""
         self._fissa_grande = False           # "mettiti al centro": resta grande finché non apro qualcosa o la riduci
         self._schermo_intero = False         # benvenuto a schermo intero: resta così finché non dici "mettiti da parte"
         self.vad =RilevatoreVoce(soglia_min=imp["SOGLIA_VOCE_MIN"])
-        self.suggerimento = ", ".join(imp["PAROLE_SUGGERITE"]) + "."
+        self.suggerimento = testo_suggerimento(imp["PAROLE_SUGGERITE"])
         self.eco = normalizza(self.suggerimento)
         self._nomi_prompt_ok = False
         self._t_fase = time.perf_counter()
@@ -207,7 +248,10 @@ class Vox:
         self._aiuto_stato = None             # ho chiesto "vuoi sentire i dettagli di un gruppo?" e aspetto la risposta
         self._pc_attesa = None               # conferma a voce in sospeso per un comando pericoloso (libreria PC)
         self._ultima_conf = None             # sicurezza dell'ultima trascrizione (avg_logprob più basso dei pezzi tenuti)
+        self._parole = []                    # [(parola, probabilità)] dell'ultima trascrizione (vox_incerte.py)
+        self._ripeti_ts = 0.0                # quando ho chiesto l'ultima volta di ripetere (per non chiederlo di continuo)
         self._attesa_citta = None            # None, oppure 0/1 (oggi/domani) se ho chiesto la città del meteo
+        self._lingua_ult = None                  # (lingua, sicurezza, parole) dell'ultima trascrizione
         self.false_note = [n for n in (normalizza(f) for f in imp.get("FRASI_FALSE", [])) if n]
         self.modello = None
         self.modello_wake = None
@@ -336,10 +380,10 @@ class Vox:
         try:
             import os
             import socket
-            if not os.environ.get("GROQ_API_KEY"):
-                self.log("ATTENZIONE: GROQ_API_KEY non trovata: Eva non potrà chiacchierare con Groq.")
+            if not provider.chiave():
+                self.log(f"ATTENZIONE: {provider.nome_variabile()} non trovata: Eva non potrà chiacchierare con {provider.nome()}.")
                 return
-            socket.getaddrinfo("api.groq.com", 443)
+            socket.getaddrinfo(provider.host(), 443)
             cervello._modello_groq_pronto()
             self._tempo("collegamento a Groq (secondo piano)", True)
         except Exception:
@@ -350,8 +394,12 @@ class Vox:
         Si esce da questa modalità solo con "mettiti da parte"."""
         if not self.imp.get("BENVENUTO_SCHERMO_INTERO", True):
             return
-        nome = self.imp.get("NOME_UTENTE") or cervello.nome_utente()
-        saluto = lingue.t("benvenuto", nome=nome)
+        nome = profilo.nome() or self.imp.get("NOME_UTENTE") or cervello.nome_utente()
+        saluto = lingue.benvenuto(nome)
+        try:
+            saluto = memoria_sessioni.saluto_con_memoria(nome) or saluto     # se c'è un riassunto, lo ricorda
+        except Exception:
+            self.log.errore("Non riesco a leggere la memoria delle sessioni")
         self._schermo_intero = True
         self._fissa_grande = True
         self._vista = "grande"
@@ -766,20 +814,59 @@ class Vox:
             reg, self._reg = self._reg, None
             registro.frase(originale, reg["tipo"], " || ".join(reg["groq"]))
 
+    def _segui_lingua(self):
+        """Rilevamento automatico: se l'ultima frase era in un'altra lingua (sicura e abbastanza lunga), Eva passa a quella
+        lingua: comandi, risposte e voce. Silenzioso: niente annuncio, la conversazione in corso non si cancella."""
+        det, self._lingua_ult = self._lingua_ult, None
+        if not det or not self.imp.get("LINGUA_AUTO", True):
+            return
+        lingua, prob, parole = det
+        if lingua == lingue.corrente:
+            return
+        if prob < self.imp.get("LINGUA_PROB_MIN", 0.6) or parole < self.imp.get("LINGUA_PAROLE_MIN", 3):
+            self.log.debug(f"LINGUA: rilevata {lingua} ({prob:.2f}, {parole} parole) ma non basta per cambiare")
+            return
+        self.log(f"LINGUA: rilevata {lingua} con sicurezza {prob:.2f} ({parole} parole): passo da {lingue.corrente} a {lingua}")
+        self._cambia_lingua(lingua, auto=True)
+
     def _esegui_comando_interno(self, testo, da_vox, originale):
         self._t_cmd = time.perf_counter()
+        if da_vox or self.conversazione:
+            try:
+                self._segui_lingua()
+            except Exception:
+                self.log.errore("Errore nel cambio automatico di lingua")
         self.log(f"Frase riconosciuta: {originale}")
         self.eventi.put(("frase", testo))
         varianti = self.imp["WAKE_VARIANTI"]
 
+        # TRASCRIZIONE INCERTA: se una parola importante non è stata sentita bene (es. «Inter» capito come «Linter»)
+        # Eva NON indovina: chiede di ripetere (vox_incerte.py). Non succede con F9 (dettatura) né mentre aspetta un sì/no.
+        parole_t, self._parole = self._parole, []
+        if da_vox and self.imp.get("RIPETI_SE_INCERTA", True):
+            try:
+                if self._chiedi_ripetere(originale, parole_t):
+                    return
+            except Exception:
+                self.log.errore("Errore nel controllo della trascrizione incerta")
+
         # MEMORIA della conversazione (memoria.py): ogni frase è uno scambio; "e domani?", "ripeti", "dimentica tutto"...
         if da_vox or self.conversazione:
+            memoria_sessioni.registra_richiesta(originale)      # per il riassunto salvato alla chiusura
             memoria.nuovo_turno(originale)
             try:
                 if self._mem_gestisci(originale):
                     return
             except Exception:
                 self.log.errore("Errore nella memoria della conversazione")
+
+        # VISTA (vox_vista.py): "Eva, guarda" -> screenshot ridotto + domanda a un modello con immagini, risposta a voce
+        if da_vox or self.conversazione:
+            try:
+                if self._vista_gestisci(originale):
+                    return
+            except Exception:
+                self.log.errore("Errore nella modalità vista")
 
         # AIUTO a voce (aiuto.py): "cosa sai fare?" -> riepilogo breve dei gruppi di comandi, poi i dettagli di un gruppo
         if da_vox or self.conversazione:
@@ -797,6 +884,14 @@ class Vox:
                     return
             except Exception:
                 self.log.errore("Errore nei promemoria")
+
+        # APPUNTI e RICORDI persistenti (appunti.py): "ricorda che...", "prendi nota...", "chiamami...", "che appunti ho?"
+        if da_vox or self.conversazione:
+            try:
+                if self._app_gestisci(originale):
+                    return
+            except Exception:
+                self.log.errore("Errore negli appunti")
 
         # UTILITÀ (utilita.py): timer, cronometro, sveglia, appunti, calcoli, batteria, musica, luminosità, Wi-Fi, Bluetooth
         if da_vox or self.conversazione:
@@ -907,7 +1002,21 @@ class Vox:
                 return
             self.log(f"Non è chiusura: '{originale}'")
 
+        # 0a) RISULTATI, METEO, NOTIZIE e "cerca ...": SEMPRE la ricerca su internet, risposta a voce (niente browser).
+        #     Il browser si apre solo con "apri Google" / "apri il browser" (comandi più sotto). Se la ricerca non
+        #     trova niente: una seconda ricerca con una frase diversa, poi "non ho trovato risultati".
+        if (da_vox or self.conversazione) and self._agente_pronto():
+            try:
+                if cervello.vox_agente.richiede_ricerca(originale) and (
+                        self.imp.get("METEO_CON_RICERCA", True) or not cervello.vox_agente._e_meteo(originale)):
+                    self.log("Agente: domanda su risultati/meteo/notizie (o «cerca»): ricerca su internet obbligatoria")
+                    if self._chat_streaming(testo, forza_ricerca=True):
+                        return
+            except Exception:
+                self.log.errore("Errore nell'agente di ricerca")
+
         # 0b) METEO: lo cerca il codice (Open-Meteo, senza chiave); Groq lo dice solo a voce
+        #     (resta il percorso di prima se l'agente è spento o non disponibile, o con METEO_CON_RICERCA = False)
         if da_vox or self.conversazione:
             try:
                 if self._meteo(originale):
@@ -977,6 +1086,11 @@ class Vox:
                         if cmd is not None and not cmd.pericoloso:       # solo azioni sicure
                             self.log(f"Libreria PC: azione proposta da Groq: {cmd.id}")
                             self._pc_esegui(cmd)
+                            return
+                    elif (azione["azione"] == "cerca" and azione.get("motore") != "youtube" and self._agente_pronto()):
+                        # Groq ha tradotto la frase in "cerca sul web": NON apro il browser, cerco io e rispondo a voce
+                        self.log("Agente: azione «cerca» proposta da Groq -> ricerca su internet a voce (niente browser)")
+                        if self._chat_streaming(testo, forza_ricerca=True):
                             return
                     elif azione["azione"] != "nessuna":
                         try:
@@ -1102,6 +1216,23 @@ class Vox:
         self.log("Aiuto: riepilogo dei gruppi di comandi (generato dalla libreria dei comandi)")
         return self._aiuto_dire(aiuto.riepilogo())
 
+    # --- vista (vox_vista.py) ----------------------------------------------------------------------
+    def _vista_gestisci(self, frase):
+        """"guarda", "guarda questo, cos'è?", "cosa vedi": screenshot dello schermo + domanda, risposta a voce."""
+        if (self._pr_stato is not None or self._pc_attesa is not None or operazioni.in_attesa()
+                or operazioni.in_corso() or vox_file.scelta_in_attesa()):
+            return False                                      # sta rispondendo a una domanda di Eva: non tocco
+        domanda = vox_vista.riconosci(frase)
+        if domanda is None:
+            return False
+        self.log(f"Vista: «{domanda}»")
+        self._aiuto_stato = None
+        risposta = vox_vista.guarda(domanda)
+        if not risposta:
+            return self._pr_dire("Non riesco a guardare lo schermo adesso. Dettagli in eva.log.")
+        memoria.completa("chat", risposta=risposta)
+        return self._pr_dire(risposta)
+
     # --- memoria della conversazione (memoria.py) ------------------------------------------------
     def _mem_gestisci(self, frase):
         """"e domani?", "e a Roma?", "ripeti", "dillo più piano", "dimmi di più", "dimentica tutto": frasi che si riferiscono
@@ -1142,10 +1273,46 @@ class Vox:
                 return self._meteo(memoria.frase_meteo(citta, giorno))
         if ult is not None and ult.tipo in ("chat", "meteo"):
             self.log("Memoria: seguito della conversazione -> Groq con gli ultimi scambi")
-            return self._chat_streaming(frase)                # Groq riceve anche le ultime domande e risposte
+            # Groq riceve anche le ultime domande e risposte; se lo scambio prima era una ricerca ("e domani?", "e a Roma?")
+            # anche questo cerca di nuovo su internet
+            return self._chat_streaming(frase, forza_ricerca=bool(tipo in ("e_giorno", "e_luogo") and ult.ctx.get("ricerca")
+                                                                  and self._agente_pronto()))
         memoria.annulla_turno()
         self.log("Memoria: frase di riferimento senza contesto: chiedo di cosa si parla")
         return self._pr_dire(memoria.tx("chiedi_argomento"), attesa=True)
+
+    # --- appunti e ricordi persistenti (appunti.py) -----------------------------------------------
+    def _app_gestisci(self, frase):
+        """Salva e legge nome, appunti e cose da ricordare (file nella cartella dati dell'utente). Solo italiano: le altre lingue
+        proseguono come sempre. Restituisce True se la frase era per gli appunti."""
+        if lingue.corrente != "it":
+            return False
+        if (self._pr_stato is not None or self._pc_attesa is not None or operazioni.in_attesa()
+                or operazioni.in_corso() or vox_file.scelta_in_attesa()):
+            return False                                      # sta rispondendo a una domanda di Eva
+        r = appunti.riconosci(frase)
+        if r is None:
+            return False
+        azione, testo = r
+        self._aiuto_stato = None
+        self.log(f"Appunti: {azione}")                        # il contenuto non si ripete nel registro
+        if azione == "nome":
+            ok = profilo.salva(nome=testo)
+            return self._pr_dire(f"Va bene, d'ora in poi ti chiamo {profilo.nome()}." if ok else
+                                 "Non riesco a salvare il nome.")
+        if azione == "chi_sono":
+            n = profilo.nome()
+            return self._pr_dire(f"Ti chiami {n}." if n else "Non so ancora come ti chiami. Dimmi: chiamami e il tuo nome.")
+        if azione in ("ricordo", "appunto"):
+            ok = appunti.aggiungi(testo, azione)
+            return self._pr_dire(("Va bene, me lo ricorderò." if azione == "ricordo" else "Appunto preso.") if ok else
+                                 "Non riesco a salvarlo.")
+        if azione == "elenca":
+            return self._pr_dire(appunti.frasi_lette())
+        if azione == "dimentica":
+            tolto = appunti.rimuovi(testo)
+            return self._pr_dire(f"Fatto, ho tolto: {tolto}." if tolto else "Non trovo un appunto che corrisponda.")
+        return False
 
     # --- promemoria a voce (promemoria.py) ------------------------------------------------------
     def _pr_dire(self, testo, attesa=False):
@@ -1481,24 +1648,28 @@ class Vox:
         self._fine_turno(0.6 if self._parla_davvero() else 1.3)
         return True
 
-    def _cambia_lingua(self, nuova):
+    def _cambia_lingua(self, nuova, auto=False):
         """Cambia lingua: trascrizione, voce, risposte, comandi, Groq e frasi di chiusura insieme; la salva nelle
         impostazioni e lo dice a voce con la voce della nuova lingua."""
         vecchia = lingue.corrente
-        self.log(f"LINGUA: cambio da {vecchia} a {nuova} (comando vocale)")
+        self.log(f"LINGUA: cambio da {vecchia} a {nuova} ({'rilevamento automatico' if auto else 'comando vocale'})")
         lingue.imposta(nuova)                                   # salva anche in impostazioni_eva.json
         lingue.applica_a_impostazioni(self.imp)                 # voce, parole suggerite, frasi di chiusura
         cervello.configura_chiusura(self.imp.get("FRASI_CHIUSURA"))
         n_intenti, nome = cervello.carica(self.log)             # risposte nella nuova lingua
         cervello._dati["utente"] = self.imp.get("NOME_UTENTE", nome)
-        cervello._cronologia.clear()                            # la chat riparte nella nuova lingua
-        memoria.svuota()                                        # e la memoria della conversazione con lei
-        self.suggerimento = ", ".join(self.imp["PAROLE_SUGGERITE"]) + "."
+        if not auto:
+            cervello._cronologia.clear()                        # la chat riparte nella nuova lingua
+            memoria.svuota()                                    # e la memoria della conversazione con lei
+        self.suggerimento = testo_suggerimento(self.imp["PAROLE_SUGGERITE"])
         self.eco = normalizza(self.suggerimento)
         self._nomi_prompt_ok = False
         trovata = self.voce.imposta_lingua(self.imp["VOCE_NOME"], self.imp["VOCE_CULTURA"], self.imp.get("VOCE_LCID", ()))
         self.log(f"LINGUA: ora {lingue.pacchetto()['nome']} | voce: {trovata or 'NON TROVATA'} | trascrizione "
                  f"{lingue.codice_whisper()} | risposte: {n_intenti} gruppi")
+        if auto:
+            self.log("Azione eseguita: lingua cambiata (automatica)")
+            return
         detta = lingue.t("lingua_cambiata")
         if not trovata:
             detta += " (voice not installed)"
@@ -1507,19 +1678,71 @@ class Vox:
         self._parla(detta)
         self._fine_turno(1.5)
 
-    def _chat_streaming(self, testo):
+    def _frase_importante(self, testo):
+        """Una ricerca o un ordine con un nome: una parola sbagliata cambia il risultato (la chiacchiera invece passa)."""
+        if cervello.vox_agente.richiede_ricerca(testo):
+            return True
+        if comandi_pc.trova(testo):
+            return False                                          # frase intera della libreria dei comandi: già robusta
+        if cervello.analizza_chiusura(testo, self.imp.get("VARIANTI_NOME", ()), self.imp.get("FRASI_CHIUSURA")).tipo in (
+                "chiudi", "esci_tutto", "programma"):
+            return False                                          # "chiudi", "basta", "spegni Eva": mai bloccarli
+        trovato, resto = self._nome(testo)
+        parole = normalizza(resto if trovato else testo).split()
+        if not parole:
+            return False
+        verbo, _n = vox_file._verbo(parole)
+        ordini = cervello.INIZI_COMANDO | cervello.VERBI_PROGRAMMA | {"copia", "sposta", "taglia", "incolla"}
+        return verbo is not None or parole[0] in ordini
+
+    def _chiedi_ripetere(self, originale, parole):
+        """True se la trascrizione è troppo incerta su una parola importante: chiedo di ripetere e non eseguo niente.
+        Una sola richiesta di fila (entro 40 s): se anche la seconda volta è incerta, vado avanti."""
+        if not parole or (operazioni.in_attesa() or operazioni.in_corso() or vox_file.scelta_in_attesa()
+                          or self._pc_attesa is not None or self._pr_stato is not None or self._aiuto_stato is not None
+                          or self._attesa_citta is not None):
+            return False                                          # sta rispondendo a una domanda di Eva: non tocco
+        sosp = vox_incerte.parola_sospetta(parole, float(self.imp.get("PAROLA_PROB_MIN", vox_incerte.PROB_MIN)))
+        if sosp is None:
+            return False
+        parola, motivo, tipo = sosp
+        if tipo == "prob" and not self._frase_importante(originale):
+            return False                                          # chiacchiera: una parola storpiata non importa
+        if time.time() - self._ripeti_ts < 40:
+            self.log(f"Trascrizione incerta su «{parola}» ({motivo}) ma ho già chiesto di ripetere: vado avanti")
+            self._ripeti_ts = 0.0
+            return False
+        self._ripeti_ts = time.time()
+        self.log(f"Trascrizione incerta: «{parola}» ({motivo}) in «{originale}»: chiedo di ripetere, non eseguo")
+        self._reg_tipo("trascrizione incerta: chiesto di ripetere (nessuna azione)")
+        return self._pr_dire(vox_incerte.domanda(parola, lingue.corrente), attesa=True)
+
+    def _agente_pronto(self):
+        """L'agente può cercare su internet: impostazione attiva, ddgs installato e chiave Groq presente."""
+        return bool(cervello.AGENTE_RICERCA and cervello.vox_agente.disponibile() and provider.chiave())
+
+    def _chat_streaming(self, testo, forza_ricerca=False):
         """Chiacchiera con Groq in streaming: la voce comincia dalla PRIMA frase, mentre le altre stanno ancora
         arrivando. Restituisce True se ha risposto; False se Groq non ha dato niente (si usa il ripiego)."""
-        if not os.environ.get("GROQ_API_KEY"):
+        if not provider.chiave():
             return False
         t0 = time.perf_counter()
         parlo = self._parla_davvero()
         dette, t_prima, t_testo = [], None, None
-        pezzi = cervello.chat_stream(testo)
+        pezzi = cervello.chat_stream(testo, forza=forza_ricerca)
+        cercato = False
         try:
             for frase in cervello.frasi_da_stream(pezzi):
                 if self.fermo.is_set() or self.f9_giu:        # F9 premuto: smetto, ora parli tu
                     break
+                if isinstance(frase, cervello.Annuncio):      # «un attimo, cerco su internet»: si dice, ma non è la risposta
+                    cercato = True
+                    self.log(f"Agente: dico «{frase}» e cerco su internet")
+                    self.eventi.put(("nota", str(frase)))
+                    if parlo:
+                        self.eventi.put(("fase", "ESEGUO"))
+                        self.voce.parla(str(frase))
+                    continue
                 if t_prima is None:
                     t_prima = time.perf_counter() - t0
                     self.log(f"TEMPO chat: prima frase pronta dopo {t_prima:.2f} s dall'invio a Groq")
@@ -1540,7 +1763,7 @@ class Vox:
         completa = " ".join(dette)
         self._reg_tipo("chat inviata a Groq (non è un comando)")
         self._reg_groq(completa)
-        memoria.completa("chat", risposta=completa)           # lo scambio entra in memoria (solo RAM)
+        memoria.completa("chat", ctx={"ricerca": True} if cercato else None, risposta=completa)   # in memoria (solo RAM)
         self.log("Frase corretta: (conversazione libera: modello, streaming)")
         self.log("Azione eseguita: risposta a voce" if parlo else "Azione eseguita: risposta scritta")
         self.log(f"Risposta detta: {completa}" + ("" if self.voce.attiva else " (voce spenta)"))
@@ -1767,25 +1990,46 @@ class Vox:
             nomi = vox_file.nomi_per_prompt(12)          # i nomi delle cartelle del Desktop aiutano Whisper
             if nomi:
                 self._nomi_prompt_ok = True
-                self.suggerimento = ", ".join(self.imp["PAROLE_SUGGERITE"]) + ". " + ", ".join(nomi) + "."
+                self.suggerimento = testo_suggerimento(self.imp["PAROLE_SUGGERITE"], nomi)
                 self.eco = normalizza(self.suggerimento)
         # Whisper, davanti a silenzio o rumore, "inventa" frasi (es. "Sottotitoli creati dalla
         # comunità Amara.org"). Difese: filtro delle pause (VAD), niente memoria della frase
         # precedente, temperatura 0, e poi scarto per probabilità di non-parlato, punteggio
         # basso e frasi false note.
-        segmenti, _ = modello.transcribe(
-            audio, language=lingue.codice_whisper(), initial_prompt=self.suggerimento,
-            beam_size=1 if veloce else 5, temperature=0.0,
-            vad_filter=True,
-            vad_parameters={"threshold": self.imp.get("VAD_SOGLIA", 0.5),
-                            "min_speech_duration_ms": 250,
-                            "min_silence_duration_ms": self.imp.get("VAD_SILENZIO_MS", 500),
-                            "speech_pad_ms": 200},
-            condition_on_previous_text=False)
+        auto = bool(self.imp.get("LINGUA_AUTO", True))
+        prompt = (lingue.SUGGERIMENTO_MULTILINGUE + " " if auto else "") + self.suggerimento
+
+        def lancia(lingua):
+            return modello.transcribe(
+                audio, language=lingua, initial_prompt=prompt,
+                beam_size=1 if veloce else 5, temperature=0.0,
+                vad_filter=True,
+                vad_parameters={"threshold": self.imp.get("VAD_SOGLIA", 0.5),
+                                "min_speech_duration_ms": 250,
+                                "min_silence_duration_ms": self.imp.get("VAD_SILENZIO_MS", 500),
+                                "speech_pad_ms": 200},
+                condition_on_previous_text=False,
+                word_timestamps=bool(self.imp.get("RIPETI_SE_INCERTA", True)))      # probabilità per parola (vox_incerte.py)
+
+        # LINGUA AUTOMATICA: Whisper riconosce la lingua; se esce una lingua che Eva non gestisce (es. portoghese) si
+        # rifà con la migliore tra italiano, francese, spagnolo e inglese. Senza LINGUA_AUTO: lingua fissa come prima.
+        self._lingua_ult = None
+        lingua_scelta = None
+        segmenti, info = lancia(None if auto else lingue.codice_whisper())
+        if auto:
+            candidate = lingue.codici_whisper()
+            probs = {l: p for l, p in (getattr(info, "all_language_probs", None) or []) if l in candidate}
+            totale = sum(probs.values())
+            if probs and totale > 0:
+                lingua_scelta = max(probs, key=probs.get)
+                self._lingua_ult = (lingua_scelta, probs[lingua_scelta] / totale, 0)
+                if info.language != lingua_scelta:
+                    segmenti, info = lancia(lingua_scelta)
         max_non_parlato = self.imp.get("NO_SPEECH_MAX", 0.6)
         min_punteggio = self.imp.get("LOGPROB_MIN", -1.0)
         tenuti = []
         punteggi = []
+        parole = []
         for s in segmenti:
             if s.no_speech_prob > max_non_parlato:
                 self.log(f"Scartato: probabile silenzio o rumore (no_speech_prob "
@@ -1796,8 +2040,12 @@ class Vox:
             elif s.text.strip():
                 tenuti.append(s.text.strip())
                 punteggi.append(s.avg_logprob)
+                parole += [(w.word, w.probability) for w in (getattr(s, "words", None) or [])]
+        self._parole = parole
         self._ultima_conf = min(punteggi) if punteggi else None      # quanto è sicura la trascrizione (0 = sicurissima)
         testo = " ".join(tenuti).strip()
+        if self._lingua_ult is not None:
+            self._lingua_ult = (self._lingua_ult[0], self._lingua_ult[1], len(testo.split()))
         self.log.debug(f"TEMPO trascrizione: {time.perf_counter() - _t_tr:.2f} s per {len(audio) / FREQ:.1f} s di audio "
                        f"({'veloce' if veloce else 'preciso'})")
         if not testo:
@@ -1809,7 +2057,7 @@ class Vox:
                 self.log(f"Scartato: frase falsa nota di Whisper ({falsa!r}): {testo!r}")
                 return ""
         # Se il modello ripete il suggerimento invece di ascoltare, lo scarto
-        if len(pulito.split()) >= 5 and pulito in self.eco:
+        if len(pulito.split()) >= 5 and (pulito in self.eco or pulito in normalizza(prompt)):
             self.log("Scartato: il modello ha ripetuto il suggerimento")
             return ""
         return testo

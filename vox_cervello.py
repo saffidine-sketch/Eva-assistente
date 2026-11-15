@@ -25,8 +25,12 @@ from pathlib import Path
 import eva_percorsi as percorsi
 from comandi import normalizza
 
+import appunti
 import memoria
+import profilo
+import vox_agente
 import vox_lingue as lingue
+import vox_provider as provider
 
 FILE_RISPOSTE = percorsi.risorsa("risposte.json")
 
@@ -77,7 +81,7 @@ def carica(log=None):
 
 
 def nome_utente():
-    return _dati.get("utente") or "amico"
+    return profilo.nome() or _dati.get("utente") or "amico"
 
 
 def collega_modello(funzione):
@@ -106,6 +110,7 @@ ISTRUZIONI_GROQ = (
     "«Certo, dimmi: apri Chrome» oppure «chiudi Chrome». Per il resto puoi chiacchierare liberamente con @NOME@."
 )
 COMPAGNA = False                 # impostato da vox_core (dettatura.py: COMPAGNA)
+AGENTE_RICERCA = True            # impostato da vox_core (dettatura.py: AGENTE_RICERCA): Groq può cercare su internet
 ISTRUZIONI_COMPAGNA = (
     " Sei soprattutto una compagna di conversazione: @NOME@ ti parla in continuazione, anche senza darti ordini. "
     "Rispondi con calore e curiosità, come un'amica, ricorda quello che vi siete detti e ogni tanto fai una domanda "
@@ -116,9 +121,8 @@ ISTRUZIONI_COMPAGNA = (
 
 def istruzioni_groq():
     """Il messaggio di sistema per Groq nella lingua scelta (la lingua della risposta cambia con quella di Eva)."""
-    testo = (lingue.groq_chat(ISTRUZIONI_GROQ) + memoria.istruzione_groq()
-             + (ISTRUZIONI_COMPAGNA if COMPAGNA else ""))
-    return testo.replace("@NOME@", nome_utente())     # il nome di chi usa Eva (schermata iniziale)
+    base = lingue.groq_chat(ISTRUZIONI_GROQ) + (ISTRUZIONI_COMPAGNA if COMPAGNA else "")
+    return profilo.personalizza(base) + memoria.istruzione_groq() + profilo.istruzioni_extra() + appunti.istruzioni()
 
 
 def parametri_modello(modello):
@@ -140,21 +144,21 @@ def _modello_groq(frase):
     """Chiede una risposta a Groq. Restituisce None se manca il pacchetto, la chiave o c'è un errore."""
     global _client_groq
     if _client_groq is None:
-        chiave = os.environ.get("GROQ_API_KEY")
+        chiave = provider.chiave()
         if not chiave:
-            logging.getLogger("eva").error("GROQ_API_KEY non trovata: niente chiacchiere con Groq")
+            logging.getLogger("eva").error(f"{provider.nome_variabile()} non trovata: niente chiacchiere con {provider.nome()}")
             return None
         try:
-            _client_groq = _nuovo_client()
+            _client_groq = provider.crea_client(TIMEOUT_GROQ, 1)
         except Exception:
-            logging.getLogger("eva").exception("Non riesco a creare il client Groq")
+            logging.getLogger("eva").exception(f"Non riesco a creare il client {provider.nome()}")
             return None
     messaggi = [{"role": "system", "content": istruzioni_groq()}, *memoria.messaggi_groq(),
                 {"role": "user", "content": frase}]
     try:
-        modello = MODELLO_GROQ
+        modello = provider.modelli(MODELLO_GROQ)[0]
         esito = _client_groq.chat.completions.create(model=modello, messages=messaggi,
-                                                     max_completion_tokens=LIMITE_TOKEN,
+                                                     **provider.limite(LIMITE_TOKEN),
                                                      **parametri_modello(modello))
         testo = (esito.choices[0].message.content or "").strip()
     except Exception:
@@ -170,7 +174,7 @@ def _modello_groq_pronto():
     """Crea in anticipo il client Groq (chiamata dal thread di avvio)."""
     global _client_groq
     if _client_groq is None:
-        _client_groq = _nuovo_client()
+        _client_groq = provider.crea_client(TIMEOUT_GROQ, 1)
 
 
 _FINE_FRASE = re.compile(r"(?<=[.!?…])\s+")
@@ -185,6 +189,14 @@ def frasi_da_stream(pezzi, max_frasi=None):
     max_frasi = max_frasi or LIMITE_FRASI
     buffer, date = "", 0
     for pezzo in pezzi:
+        if isinstance(pezzo, Annuncio):               # "un attimo, cerco su internet": subito, senza contare
+            resto = buffer.strip()
+            buffer = ""
+            if resto and date < max_frasi:
+                yield resto
+                date += 1
+            yield pezzo
+            continue
         buffer += pezzo
         while True:
             m = _FINE_FRASE.search(buffer)
@@ -206,25 +218,163 @@ def frasi_da_stream(pezzi, max_frasi=None):
         yield resto
 
 
-def chat_stream(frase):
+class Annuncio(str):
+    """Una frase che Eva dice da sé (es. «un attimo, cerco su internet»): si dice subito, non conta nel limite di
+    frasi e non entra nella memoria della conversazione."""
+
+
+def _giro(client, modello, messaggi, strumenti):
+    """Una chiamata in streaming. Restituisce ("testo", pezzo) man mano e, alla fine, ("chiamate", [..]) se Groq ha
+    chiesto uno strumento. strumenti: "forza" (DEVE chiamarlo), "auto" (può chiamarlo) o "nessuno" (non può più)."""
+    scelta = {"forza": {"type": "function", "function": {"name": "cerca_su_internet"}},
+              "auto": "auto"}.get(strumenti, "none")
+    flusso = client.chat.completions.create(
+        model=modello, stream=True, messages=messaggi, **provider.limite(LIMITE_TOKEN), **parametri_modello(modello),
+        tools=vox_agente.STRUMENTI, tool_choice=scelta)
+    chiamate = {}
+    for blocco in flusso:
+        if not blocco.choices:
+            continue
+        delta = blocco.choices[0].delta
+        if delta.content:
+            yield ("testo", delta.content)
+        for tc in (getattr(delta, "tool_calls", None) or []):
+            c = chiamate.setdefault(tc.index or 0, {"id": "", "name": "", "args": ""})
+            if tc.id:
+                c["id"] = tc.id
+            if tc.function:
+                c["name"] += tc.function.name or ""
+                c["args"] += tc.function.arguments or ""
+    if chiamate:
+        yield ("chiamate", [chiamate[k] for k in sorted(chiamate)])
+
+
+def chat_stream(frase, forza=False):
+    """Come _chat_stream_base, ma Groq può chiedere da solo la ricerca su internet (vox_agente.py): in quel caso
+    arriva prima un Annuncio («un attimo, cerco su internet»), poi la risposta basata sui risultati.
+    forza=True (risultati, meteo, notizie, "cerca ..."): la ricerca è OBBLIGATORIA. Se la ricerca non trova niente
+    si riprova UNA volta con una frase diversa, poi Eva dice che non ha trovato risultati.
+    Se l'agente è spento, manca ddgs o Groq rifiuta gli strumenti, si usa la chat di sempre."""
+    global _client_groq
+    log = logging.getLogger("eva")
+    if not (AGENTE_RICERCA and vox_agente.disponibile()) or not provider.chiave():
+        yield from _chat_stream_base(frase)
+        return
+    messaggi = [{"role": "system", "content": istruzioni_groq() + vox_agente.istruzioni()},
+                *memoria.messaggi_groq(), {"role": "user", "content": frase}]
+    try:
+        if _client_groq is None:
+            _client_groq = provider.crea_client(TIMEOUT_GROQ, 1)
+        elenco = provider.modelli(MODELLO_GROQ, MODELLO_RISERVA)
+        testo, chiamate, modello_ok = "", [], elenco[0]
+        fatto = False
+        for modello in elenco:
+            for scelta in (("forza", "auto") if forza else ("auto",)):      # se "forza" è rifiutato: riprovo con "auto"
+                try:
+                    for tipo, dato in _giro(_client_groq, modello, messaggi, scelta):
+                        if tipo == "testo":
+                            testo += dato
+                            yield dato
+                        else:
+                            chiamate = dato
+                    modello_ok, fatto = modello, True
+                    break
+                except GeneratorExit:
+                    raise
+                except Exception:
+                    if testo:                               # ho già parlato: non si può ricominciare
+                        log.exception("Groq si è interrotto durante la risposta")
+                        return
+                    if scelta == "forza":
+                        log.exception(f"Groq ({modello}) non accetta la ricerca obbligatoria: riprovo con scelta libera")
+                        continue
+                    if modello == elenco[-1]:
+                        log.exception("Groq rifiuta gli strumenti o non risponde: uso la chat senza ricerca")
+                        yield from _chat_stream_base(frase)
+                        return
+                    log.exception(f"Groq ({modello}) non risponde: riprovo con {MODELLO_RISERVA}")
+            if fatto:
+                break
+        if not chiamate:
+            return
+        c = chiamate[0]
+        if c["name"] != "cerca_su_internet":
+            log.warning(f"Groq ha chiesto uno strumento sconosciuto: {c['name']!r} (ignorato)")
+            return
+        query = vox_agente.query_da_argomenti(c["args"])
+        log.info(f"Agente: Groq chiede di cercare su internet: «{query}»")
+        yield Annuncio(vox_agente.annuncio())               # parte subito a voce, mentre cerco
+        risultati, _n, esito = vox_agente.cerca(query)
+        idc = c["id"] or "call_0"
+        chiamata = {"role": "assistant", "content": testo or None,
+                    "tool_calls": [{"id": idc, "type": "function",
+                                    "function": {"name": c["name"], "arguments": c["args"] or "{}"}}]}
+        if esito == "nessun_risultato":
+            # UN secondo tentativo con una frase DIVERSA: la propone Groq (il suo testo non si dice); se non ne propone
+            # una diversa la riformula il codice (vox_agente.riformula).
+            log.info(f"Agente: nessun risultato per «{query}»: riprovo con una frase diversa")
+            nuova = None
+            try:
+                chiesta = messaggi + [chiamata, {"role": "tool", "tool_call_id": idc, "content":
+                                                 f'No results found for "{query}". Search ONE more time with a clearly '
+                                                 "different wording (other keywords, a synonym or a broader topic). "
+                                                 "Do not answer yet."}]
+                for tipo, dato in _giro(_client_groq, modello_ok, chiesta, "forza"):
+                    if tipo == "chiamate" and dato[0]["name"] == "cerca_su_internet":
+                        nuova = vox_agente.query_da_argomenti(dato[0]["args"])
+            except GeneratorExit:
+                raise
+            except Exception:
+                log.exception("Groq non ha proposto una nuova frase di ricerca")
+            if not nuova or nuova.strip().lower() == query.strip().lower():
+                nuova = vox_agente.riformula(query)
+            log.info(f"Agente: seconda ricerca con la frase «{nuova}»")
+            risultati, _n, esito = vox_agente.cerca(nuova)
+            query = nuova
+            chiamata["tool_calls"][0]["function"]["arguments"] = json.dumps({"query": nuova}, ensure_ascii=False)
+        if esito:
+            log.info(f"Agente: ricerca senza risultati utili ({esito})")
+            # Frase fissa, decisa dal codice (Groq non deve inventare "internet è saltato"):
+            yield vox_agente.nessun_risultato() if esito == "nessun_risultato" else vox_agente.errore()
+            return
+        messaggi2 = messaggi + [chiamata, {"role": "tool", "tool_call_id": idc, "content": risultati}]
+        detto = False
+        try:
+            for tipo, dato in _giro(_client_groq, modello_ok, messaggi2, "nessuno"):    # una sola ricerca per domanda
+                if tipo == "testo":
+                    detto = True
+                    yield dato
+        except GeneratorExit:
+            raise
+        except Exception:
+            log.exception("Groq non ha risposto dopo la ricerca")
+            if not detto:
+                yield vox_agente.errore()
+    except GeneratorExit:
+        raise
+    except Exception:
+        log.exception("Errore nella chat con ricerca su internet")
+
+
+def _chat_stream_base(frase):
     """Risposta di Groq IN STREAMING: restituisce i pezzetti di testo appena arrivano. Se manca la chiave,
     internet o Groq dà errore, scrive l'errore nel log e non restituisce niente (il chiamante usa il ripiego).
     Alla fine ricorda lo scambio nella cronologia."""
     global _client_groq
     log = logging.getLogger("eva")
-    chiave = os.environ.get("GROQ_API_KEY")
+    chiave = provider.chiave()
     if not chiave:
-        log.error("GROQ_API_KEY non trovata: niente chiacchiere con Groq")
+        log.error(f"{provider.nome_variabile()} non trovata: niente chiacchiere con {provider.nome()}")
         return
     try:
         if _client_groq is None:
-            _client_groq = _nuovo_client()
+            _client_groq = provider.crea_client(TIMEOUT_GROQ, 1)
         testo = ""
-        elenco = (MODELLO_GROQ, MODELLO_RISERVA)
+        elenco = provider.modelli(MODELLO_GROQ, MODELLO_RISERVA)
         for modello in elenco:
             try:
                 flusso = _client_groq.chat.completions.create(
-                    model=modello, stream=True, max_completion_tokens=LIMITE_TOKEN, **parametri_modello(modello),
+                    model=modello, stream=True, **provider.limite(LIMITE_TOKEN), **parametri_modello(modello),
                     messages=[{"role": "system", "content": istruzioni_groq()}, *memoria.messaggi_groq(),
                               {"role": "user", "content": frase}])
                 for blocco in flusso:
@@ -251,15 +401,15 @@ def frase_da_groq(istruzione):
     """Una richiesta singola a Groq (senza memoria della chat), per es. dire a voce i dati del meteo.
     Restituisce il testo oppure None (manca la chiave, niente internet, errore): il chiamante ha un ripiego."""
     global _client_groq
-    chiave = os.environ.get("GROQ_API_KEY")
+    chiave = provider.chiave()
     if not chiave:
         return None
     try:
         if _client_groq is None:
-            _client_groq = _nuovo_client()
-        modello = MODELLO_GROQ
+            _client_groq = provider.crea_client(TIMEOUT_GROQ, 1)
+        modello = provider.modelli(MODELLO_GROQ)[0]
         esito = _client_groq.chat.completions.create(
-            model=modello, max_completion_tokens=LIMITE_TOKEN, **parametri_modello(modello),
+            model=modello, **provider.limite(LIMITE_TOKEN), **parametri_modello(modello),
             messages=[{"role": "system", "content": istruzioni_groq()}, {"role": "user", "content": istruzione}])
         return (esito.choices[0].message.content or "").strip() or None
     except Exception:
@@ -666,9 +816,9 @@ def testo_fisso(chiave, predefinito="", **campi):
         return _scegli("fissa:" + chiave, _dati["fisse"][chiave], **campi)
     campi.setdefault("nome", nome_utente())
     try:
-        return predefinito.format(**campi)
+        return profilo.personalizza(predefinito.format(**campi))
     except (KeyError, IndexError):
-        return predefinito
+        return profilo.personalizza(predefinito)
 
 
 def saluto_vox_da_solo():

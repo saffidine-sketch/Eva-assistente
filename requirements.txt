@@ -11,3 +11,4 @@ pywinauto
 pywin32
 comtypes
 pycaw
+ddgs

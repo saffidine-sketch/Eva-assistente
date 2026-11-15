@@ -21,19 +21,42 @@ import time
 from pathlib import Path
 
 import eva_percorsi as percorsi
-VERSIONE = "2.2"           # versione di Eva (si scrive in eva_log.txt a ogni avvio)
+VERSIONE = "2.3"           # versione di Eva (si scrive in eva_log.txt a ogni avvio)
 
 T0 = time.perf_counter()      # per misurare i tempi di avvio (scritti in eva.log come "TEMPO avvio")
 
 # ----------------------------------------------------------------------
 # IMPOSTAZIONI (facili da modificare)
 # ----------------------------------------------------------------------
-# --- Lingua: it (italiano), fr (francese), es (spagnolo), en (inglese) ---
+# --- Lingua: it (italiano), fr (francese), es (spagnolo), en (inglese), pt (portoghese) ---
 # Cambiano insieme: trascrizione del microfono, voce di Windows, comandi (apri/chiudi...), risposte fisse e Groq.
-# A voce: "Eva, parla francese" / "speak English" / "habla español" / "parla italiano". La scelta fatta a voce si salva
+# A voce: "Eva, parla francese" / "speak English" / "habla español" / "fala português" / "parla italiano". La scelta fatta a voce si salva
 # in impostazioni_eva.json (chiave "lingua") e VALE AL POSTO di questa; per tornare a questa, cancella quella chiave.
 LINGUA = "it"
-VOCI_LINGUE = {"it": "Elsa", "fr": "Hortense", "es": "Helena", "en": "Zira"}     # voci di Windows (anche solo una parte del nome)
+# Rilevamento AUTOMATICO: Whisper riconosce da solo se parli italiano, francese, spagnolo, inglese o portoghese e Eva risponde nella
+# lingua dell'ULTIMA frase. False = lingua fissa (solo a comando). La lingua cambia solo se la frase ha almeno
+# LINGUA_PAROLE_MIN parole e la sicurezza del rilevamento è almeno LINGUA_PROB_MIN (0..1): le frasi brevi non la cambiano.
+LINGUA_AUTO = True
+LINGUA_PROB_MIN = 0.6
+LINGUA_PAROLE_MIN = 3
+VOCI_LINGUE = {"it": "Elsa", "fr": "Hortense", "es": "Helena", "en": "Zira", "pt": "Maria"}     # voci di Windows (anche solo una parte del nome)
+
+# --- AGENTE: ricerca su internet (vox_agente.py) ---
+# True = quando Eva non sa una cosa o serve un dato aggiornato, Groq decide da solo di cercare su internet: Eva dice
+# "un attimo, cerco su internet", legge i risultati e risponde. La DOMANDA cercata esce dal PC verso i motori di ricerca (via ddgs).
+# Serve il pacchetto ddgs (py -3.12 -m pip install ddgs); senza, Eva si comporta come prima. False = non cerca mai.
+AGENTE_RICERCA = True
+# Con l'agente attivo, anche le domande sul METEO passano dalla ricerca su internet (risposta a voce). False = il meteo
+# lo cerca il codice con Open-Meteo, come prima (più veloce e preciso, con la città predefinita).
+METEO_CON_RICERCA = True
+
+# --- Trascrizione incerta (vox_incerte.py) ---
+# True = se Eva non sente bene una parola importante (es. "Inter" capito come "Linter" in una ricerca o in un ordine),
+# non indovina: dice "Non ho capito bene la parola ..., puoi ripetere?" e non fa niente. Una sola richiesta di fila.
+# PAROLA_PROB_MIN: sotto questa probabilità (0-1) una parola è "incerta" (più alta = chiede più spesso).
+# I nomi da sentire bene (squadre...) si ampliano in nomi_noti.json.
+RIPETI_SE_INCERTA = True
+PAROLA_PROB_MIN = 0.45
 
 # --- MODALITÀ COMPAGNA (l'unico interruttore per tornare a com'era prima) ---
 # True  = Eva ascolta SEMPRE, senza F9 e senza dire "Eva" ogni volta: la conversazione è continua, ricorda quello
@@ -81,6 +104,10 @@ FRASI_CHIUSURA = [
 # (apri, apri cartella, chiudi, cerca, volume, copia, sposta, incolla). Esegue Eva con le funzioni di sempre.
 # I comandi semplici restano locali (veloci, senza internet). Serve GROQ_API_KEY, la stessa della chat.
 # Senza internet o se Groq non risponde, Eva lo dice a voce.
+# --- SERVIZIO IA PER LA CHAT: una sola parola per cambiare ---
+# "groq" (predefinito) oppure "deepseek". Chiave: variabile d'ambiente GROQ_API_KEY / DEEPSEEK_API_KEY.
+PROVIDER = "groq"
+DEEPSEEK_API_KEY = ""           # meglio lasciarla vuota e usare la variabile d'ambiente: questo file finisce su GitHub
 
 GROQ_AZIONI = True             # False = come prima: niente ripiego, risponde solo con le frasi fisse
 GROQ_AZIONI_TIMEOUT = 8         # secondi di attesa massima per Groq (poi dice che non risponde)
@@ -150,6 +177,10 @@ PAROLE_SUGGERITE = [
     "copia", "sposta", "taglia", "incolla", "chiavetta", "sì", "conferma", "annulla",
     "mettiti da parte", "mettiti al centro", "nasconditi",
     "ricordami", "promemoria", "chiudi", "basta", "arrivederci", "spegni Eva",       # aiutano a sentire bene le parole di chiusura
+    # ATTENZIONE: Whisper tiene solo gli ULTIMI 223 token del suggerimento e taglia l'inizio. Questa lista occupa già
+    # 164 token (più i nomi delle cartelle che Eva aggiunge in coda): aggiungere parole qui fa sparire le prime.
+    # Parole TUE (la tua città, un nome che Whisper sbaglia) NON vanno qui: il file è pubblico. Scrivile in
+    # impostazioni_eva.json, voce "parole_extra": ["nome", ...] (resta sul tuo PC; si legge a ogni avvio).
 ]
 # --- Il nome: come può essere sentita la parola "Eva" con il tuo accento ---
 # Aggiungi qui le varianti che vedi nel terminale o in eva.log ("Parola di attivazione sentita: ...").
@@ -262,6 +293,16 @@ def _senza_finestra(vox, log):
         log("Chiuso con Ctrl+C.")
 
 
+def _salva_sessione(log):
+    """Alla chiusura salva il riassunto della sessione (lo ricorderà il saluto al prossimo avvio)."""
+    try:
+        import memoria_sessioni
+        if memoria_sessioni.salva_sessione():
+            log("Riassunto della sessione salvato.")
+    except Exception:
+        log.errore("Non riesco a salvare il riassunto della sessione")
+
+
 def main():
     log = Registro()
 
@@ -281,14 +322,14 @@ def main():
 
     imp = {"WAKE_WORD": WAKE_WORD, "TASTO": TASTO, "MODELLO": MODELLO,
            "MODELLO_WAKE": MODELLO_WAKE, "SECONDI_SILENZIO": SECONDI_SILENZIO,
-           "SOGLIA_VOCE_MIN": SOGLIA_VOCE_MIN, "LINGUA": LINGUA, "VOCI_LINGUE": VOCI_LINGUE,
+           "SOGLIA_VOCE_MIN": SOGLIA_VOCE_MIN, "LINGUA": LINGUA, "VOCI_LINGUE": VOCI_LINGUE, "LINGUA_AUTO": LINGUA_AUTO, "LINGUA_PROB_MIN": LINGUA_PROB_MIN, "LINGUA_PAROLE_MIN": LINGUA_PAROLE_MIN,
            "TRASCRIZIONE_VELOCE_PRIMA": TRASCRIZIONE_VELOCE_PRIMA, "CONFIDENZA_VELOCE_MIN": CONFIDENZA_VELOCE_MIN, "PAROLE_SUGGERITE": PAROLE_SUGGERITE,
            "WAKE_VARIANTI": WAKE_VARIANTI, "VARIANTI_NOME": VARIANTI_NOME,
            "ACCETTA_VECCHIO_NOME": ACCETTA_VECCHIO_NOME, "VARIANTI_VECCHIO_NOME": VARIANTI_VECCHIO_NOME, "VOCE_ATTIVA": VOCE_ATTIVA, "VOCE_NOME": VOCE_NOME,
            "VOCE_VELOCITA": VOCE_VELOCITA, "VOCE_VOLUME": VOCE_VOLUME,
            "VOCE_PAUSA_DOPO": VOCE_PAUSA_DOPO, "NOME_UTENTE": NOME_UTENTE, "VERSIONE": VERSIONE,
            "FRASI_CHIUSURA": FRASI_CHIUSURA,
-           "GROQ_AZIONI": GROQ_AZIONI, "GROQ_AZIONI_TIMEOUT": GROQ_AZIONI_TIMEOUT,
+           "PROVIDER": PROVIDER, "DEEPSEEK_API_KEY": DEEPSEEK_API_KEY, "GROQ_AZIONI": GROQ_AZIONI, "GROQ_AZIONI_TIMEOUT": GROQ_AZIONI_TIMEOUT,
            "RIDUCI_DOPO_APERTURA": RIDUCI_DOPO_APERTURA, "SPARISCI_DOPO_COMANDO": SPARISCI_DOPO_COMANDO,
            "SECONDI_PRIMA_DI_SPARIRE": SECONDI_PRIMA_DI_SPARIRE, "ANGOLO_PREDEFINITO": ANGOLO_PREDEFINITO,
            "OPACITA_RIDOTTA": OPACITA_RIDOTTA, "SCALA_RIDOTTA": SCALA_RIDOTTA, "MARGINE": MARGINE,
@@ -298,7 +339,7 @@ def main():
            "AGGIORNA_INDICE_MINUTI": AGGIORNA_INDICE_MINUTI, "SOGLIA_CARTELLE": SOGLIA_CARTELLE,
            "TEMPO_RICERCA_DISCO": TEMPO_RICERCA_DISCO, "NAV_VALIDITA_SECONDI": NAV_VALIDITA_SECONDI,
            "SUGGERISCI_NOMI_CARTELLE": SUGGERISCI_NOMI_CARTELLE,
-           "CONVERSAZIONE_CONTINUA": CONVERSAZIONE_CONTINUA, "COMPAGNA": COMPAGNA, "COMPAGNA_CONFIDENZA_MIN": COMPAGNA_CONFIDENZA_MIN,
+           "CONVERSAZIONE_CONTINUA": CONVERSAZIONE_CONTINUA, "AGENTE_RICERCA": AGENTE_RICERCA, "METEO_CON_RICERCA": METEO_CON_RICERCA, "RIPETI_SE_INCERTA": RIPETI_SE_INCERTA, "PAROLA_PROB_MIN": PAROLA_PROB_MIN, "COMPAGNA": COMPAGNA, "COMPAGNA_CONFIDENZA_MIN": COMPAGNA_CONFIDENZA_MIN,
            "COMPAGNA_IGNORA_AUDIO": COMPAGNA_IGNORA_AUDIO,
            "TIMEOUT_CONVERSAZIONE": TIMEOUT_CONVERSAZIONE, "NO_SPEECH_MAX": NO_SPEECH_MAX, "LOGPROB_MIN": LOGPROB_MIN, "VAD_SOGLIA": VAD_SOGLIA,
            "VAD_SILENZIO_MS": VAD_SILENZIO_MS, "FRASI_FALSE": FRASI_FALSE}
@@ -325,6 +366,7 @@ def main():
             "F9" + (' e "Eva"' if WAKE_WORD else "") + " funzionano lo stesso.")
         log("Per la finestra con la sfera:  python -m pip install PySide6-Essentials")
         _senza_finestra(vox, log)
+        _salva_sessione(log)
         vox.ferma()
         return 0
 
@@ -335,6 +377,7 @@ def main():
         log.errore("Errore nella finestra")
         raise
     log("Eva chiuso.")
+    _salva_sessione(log)
     vox.ferma()
     server.close()
     return codice

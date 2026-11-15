@@ -21,7 +21,7 @@ import promemoria
 import utilita
 import vox_lingue as lingue
 
-LINGUE = ("it", "fr", "es", "en")
+LINGUE = ("it", "fr", "es", "en", "pt")
 N_ESEMPI = 4
 SPESSORE_MIN_FUZZY = 8
 
@@ -49,6 +49,10 @@ NOMI = {
     "conversazione": {"it": "domande e conversazione", "fr": "questions et conversation", "es": "preguntas y conversación", "en": "questions and conversation"},
     "lingua": {"it": "cambio lingua", "fr": "changement de langue", "es": "cambio de idioma", "en": "changing language"},
 }
+for _g, _v in {"finestre": "janelas e programas", "cartelle": "pastas", "testo_browser": "texto e navegador",
+               "volume": "volume", "promemoria": "lembretes", "conversazione": "perguntas e conversa",
+               "lingua": "troca de idioma"}.items():
+    NOMI[_g]["pt"] = _v
 # nomi per eventuali categorie NUOVE della tabella (se manca, si usa il nome della categoria)
 NOMI_CATEGORIE = {}
 # parole con cui la persona può nominare un gruppo (senza accenti)
@@ -67,6 +71,11 @@ CHIAVI = {
     "sicurezza": {"it": "spegnere spegni riavviare riavvia eliminare elimina cancellare pericolosi sicurezza", "fr": "eteindre redemarrer supprimer dangereux securite",
                   "es": "apagar reiniciar eliminar peligrosos seguridad", "en": "shut restart delete dangerous safety security"},
 }
+for _g, _v in {"finestre": "janelas janela programas programa aplicativos apps sistema", "cartelle": "pastas pasta arquivos",
+               "testo_browser": "texto navegador rolagem rolar abas aba internet", "volume": "volume som audio captura",
+               "promemoria": "lembretes lembrete", "conversazione": "perguntas pergunta conversa tempo papo",
+               "lingua": "idioma idiomas lingua", "sicurezza": "desligar reiniciar eliminar perigosos seguranca"}.items():
+    CHIAVI[_g]["pt"] = _v
 # accenti persi nelle frasi della tabella (che sono scritte senza accenti per il riconoscimento): per la VOCE li rimetto
 ACCENTI = {
     "it": {"giu": "giù", "attivita": "attività", "pc": "PC"},
@@ -75,6 +84,8 @@ ACCENTI = {
            "telechargements": "téléchargements", "taches": "tâches", "ecran": "écran", "a": "à", "pc": "PC"},
     "es": {"atras": "atrás", "configuracion": "configuración", "desplazate": "desplázate", "pagina": "página", "pestana": "pestaña",
            "pc": "PC"},
+    "pt": {"area": "área", "configuracoes": "configurações", "pagina": "página", "proxima": "próxima", "ultima": "última",
+           "transferencias": "transferências", "musica": "música", "pc": "PC"},
     "en": {"pc": "PC"},
 }
 
@@ -90,6 +101,8 @@ FRASI_AIUTO = {
           "que puis-je te dire",
     "es": "qué sabes hacer|qué puedes hacer|ayuda|ayúdame|cómo puedes ayudarme|qué comandos tienes|qué comandos conoces|"
           "cuáles son los comandos|para qué sirves|cómo te uso|lista de comandos|qué puedo decirte",
+    "pt": "o que você sabe fazer|o que você pode fazer|ajuda|me ajuda|como você pode me ajudar|quais comandos você tem|"
+          "quais comandos você conhece|quais são os comandos|para que você serve|como te uso|lista de comandos|o que posso dizer",
     "en": "what can you do|what do you do|help|help me|how can you help me|what commands do you have|what commands do you know|"
           "what are the commands|what are you for|how do i use you|list of commands|what can i say",
 }
@@ -125,6 +138,16 @@ TX = {
         "altro": "¿Otro grupo?",
         "quale": "¿Qué grupo? {nomi}.",
         "va_bene": "De acuerdo.",
+    },
+    "pt": {
+        "intro": "Posso ajudar com {gruppi}.",
+        "e": "e",
+        "sicurezza": "Para desligar, reiniciar ou eliminar, eu sempre peço a sua confirmação em voz alta.",
+        "domanda": "Quer ouvir os detalhes de um grupo?",
+        "dettagli": "No grupo {nome} você pode dizer, por exemplo: {esempi}.",
+        "altro": "Outro grupo?",
+        "quale": "Qual grupo? {nomi}.",
+        "va_bene": "Certo.",
     },
     "en": {
         "intro": "I can help you with {gruppi}.",

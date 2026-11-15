@@ -1,13 +1,24 @@
-# Eva 2.2
+# Eva 2.3: più unica, più tua
 
-Eva è un'assistente vocale per Windows: la senti parlare, ti risponde a voce, apre programmi e cartelle,
-cerca sul web, gestisce il volume, prepara bozze di mail, dice il meteo e fa due chiacchiere.
-Ha una sfera animata sullo schermo e parla in italiano, francese, spagnolo e inglese.
+Eva è un assistente vocale per il PC Windows. Ti siedi, parli, e lei apre cartelle, cerca file, guarda lo schermo
+e ti risponde con un tocco di ironia. Apre programmi, gestisce il volume, prepara bozze di mail, dice il meteo e fa
+due chiacchiere. Parla in italiano, francese, spagnolo, inglese e portoghese brasiliano.
 
 Eva è un regalo gratuito e usa **solo Groq**, che ha un piano gratuito (vedi sotto).
 
-**Senza installare Python:** scarica `Eva_Setup_2.2.exe` dalla pagina delle *Releases* e avvialo. Al primo avvio serve
-internet (modelli vocali e chiave di Groq).
+**Senza installare Python:** scarica `Eva_Setup_2.3.exe` dalla pagina delle *Releases*, aprilo e segui i passaggi,
+scegliendo la lingua. Se Windows mostra l'avviso blu «Windows ha protetto il PC», clicca su *Ulteriori informazioni*
+e poi su *Esegui comunque*: il programma non è ancora firmato. Alla prima apertura Eva ti chiede il tuo nome e la
+chiave gratuita di Groq; serve internet (modelli vocali e chiave).
+
+## Novità della 2.3
+
+- **Nuova grafica:** un cerchio con fulmini arancio e oro che reagiscono quando Eva ascolta, pensa e parla.
+- **Memoria tra le sessioni:** Eva riprende da dove eravate rimasti.
+- **Modalità vista:** di' «Eva, guarda lo schermo» e lei descrive cosa vede (vedi *Privacy*: lo screenshot va a Groq).
+- **Cinque lingue:** italiano, francese, spagnolo, inglese e portoghese brasiliano, con scelta durante l'installazione.
+- **Ricerca su internet.**
+- **Avvio automatico con Windows**, se vuoi (casella nell'installazione).
 
 ## Novità della 2.2: le utilità (solo in italiano)
 
@@ -106,5 +117,14 @@ Eva è software libero con licenza MIT: vedi il file `LICENSE`.
 
 ## Privacy
 
-Il riconoscimento vocale (Whisper) gira sul tuo PC. A Groq vanno solo le frasi trascritte, non l'audio.
-Eva non cancella mai file e le mail restano bozze.
+Il riconoscimento vocale (Whisper) gira sul tuo PC: l'audio non lascia mai il computer. A Groq vanno le frasi
+trascritte, le ultime frasi della conversazione e le istruzioni di Eva (con il tuo nome, lo stile e gli appunti più
+recenti). Inoltre:
+
+- **ricerca su internet:** la domanda di ricerca, scritta da Groq, va ai motori di ricerca (via ddgs); si spegne con
+  `AGENTE_RICERCA = False` in `dettatura.py`;
+- **modalità vista:** solo quando chiedi a Eva di guardare, lo screenshot di tutto lo schermo (ridotto, non salvato su
+  disco) va a Groq. Usala quando sullo schermo non c'è niente di riservato.
+
+Il testo completo è nel menu di Eva (icona accanto all'orologio) > Privacy. Eva non cancella mai file e le mail
+restano bozze.

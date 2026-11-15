@@ -26,7 +26,7 @@ import vox_lingue as lingue
 
 FILE = percorsi.dati("promemoria.json")
 _blocco = threading.RLock()
-LINGUE = ("it", "fr", "es", "en")
+LINGUE = ("it", "fr", "es", "en", "pt")
 
 
 # ======================================================================
@@ -51,18 +51,21 @@ _UNITA = {
     "it": "zero uno due tre quattro cinque sei sette otto nove".split(),
     "fr": "zero un deux trois quatre cinq six sept huit neuf".split(),
     "es": "cero uno dos tres cuatro cinco seis siete ocho nueve".split(),
+    "pt": "zero um dois tres quatro cinco seis sete oito nove".split(),
     "en": "zero one two three four five six seven eight nine".split(),
 }
 _TEENS = {
     "it": "dieci undici dodici tredici quattordici quindici sedici diciassette diciotto diciannove".split(),
     "fr": ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix sept", "dix huit", "dix neuf"],
     "es": "diez once doce trece catorce quince dieciseis diecisiete dieciocho diecinueve".split(),
+    "pt": "dez onze doze treze catorze quinze dezesseis dezessete dezoito dezenove".split(),
     "en": "ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split(),
 }
 _DECINE = {
     "it": {"venti": 20, "trenta": 30, "quaranta": 40, "cinquanta": 50, "sessanta": 60, "settanta": 70, "ottanta": 80, "novanta": 90},
     "fr": {"vingt": 20, "trente": 30, "quarante": 40, "cinquante": 50, "soixante": 60},
     "es": {"veinte": 20, "treinta": 30, "cuarenta": 40, "cincuenta": 50, "sesenta": 60, "setenta": 70, "ochenta": 80, "noventa": 90},
+    "pt": {"vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50, "sessenta": 60, "setenta": 70, "oitenta": 80, "noventa": 90},
     "en": {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90},
 }
 _EXTRA = {"it": {"un": 1, "una": 1}, "fr": {"une": 1}, "es": {"un": 1, "una": 1},
@@ -92,6 +95,8 @@ def _tabella_numeri(lg):
                     t["veinti" + uw] = v + u
                 else:
                     t[w + " y " + uw] = v + u
+            elif lg == "pt":
+                t[w + " e " + uw] = v + u
             else:
                 t[w + " " + uw] = v + u
     t["veintidos"] = 22  # "veintidós" piegato
@@ -99,9 +104,13 @@ def _tabella_numeri(lg):
 
 
 _NUMERI = {lg: _tabella_numeri(lg) for lg in LINGUE}
+_NUMERI["pt"].update({"uma": 1, "duas": 2, "quatorze": 14, "dezasseis": 16, "dezassete": 17})
+for _w, _v in _DECINE["pt"].items():                       # "vinte e uma", "vinte e duas" (femminile)
+    _NUMERI["pt"][_w + " e uma"] = _v + 1
+    _NUMERI["pt"][_w + " e duas"] = _v + 2
 _NUM_RE = {}
 for _lg in LINGUE:
-    _alt = sorted((p for p in _NUMERI[_lg] if p not in ("un", "una", "une", "a", "an")), key=len, reverse=True)
+    _alt = sorted((p for p in _NUMERI[_lg] if p not in ("un", "una", "une", "a", "an", "um", "uma")), key=len, reverse=True)
     _NUM_RE[_lg] = r"(?:\d{1,3}|" + "|".join(re.escape(p) for p in _alt) + ")"
 
 
@@ -115,7 +124,7 @@ def valore(token, lg):
 # ======================================================================
 # Grammatica di ogni lingua (sul testo piegato)
 # ======================================================================
-_UN = {"it": r"(?:un|uno|una)", "fr": r"(?:un|une)", "es": r"(?:un|uno|una)", "en": r"(?:a|an|one)"}
+_UN = {"it": r"(?:un|uno|una)", "fr": r"(?:un|une)", "es": r"(?:un|uno|una)", "en": r"(?:a|an|one)", "pt": r"(?:um|uma)"}
 CONFIG = {
     "it": {
         "trigger": r"\b(?:ricordami|ricordarmi|ricorda mi|fammi ricordare|(?:metti|imposta|crea|aggiungi|fai|puoi mettere)\s+(?:un\s+)?promemoria)\b",
@@ -174,6 +183,26 @@ CONFIG = {
         "connettivi": r"^(?:de|a|para)\s+",
         "riempitivi_fine": r"\s+(?:por favor|gracias)$",
     },
+    "pt": {
+        "trigger": r"\b(?:me lembra|me lembre|lembra me|lembre me|me avisa|me avise|(?:coloca|poe|ponha|cria|crie|adiciona|adicione|faz|faca|configura|configure)\s+(?:um\s+)?lembrete)\b",
+        "nome": r"\blembretes?\b",
+        "rel_pref": r"em|daqui a|daqui|dentro de|depois de",
+        "rel_unita": [(r"segundos?", 1), (r"minutos?", 60), (r"horas?", 3600), (r"dias?", 86400), (r"semanas?", 604800)],
+        "rel_speciali": [(r"meia hora", 1800), (r"um quarto de hora", 900), (r"uma hora e meia", 5400)],
+        "abs_pref": r"(?:as|a uma|por volta das|por volta da|pelas|ate as)",
+        "ocl": r"(?:horas?|h)",
+        "sep": r"e",
+        "frac": [(r"meia", 30), (r"um quarto", 15)],
+        "mezzogiorno": r"meio dia", "mezzanotte": r"meia noite",
+        "am": [r"(?:da|de|pela|esta)\s+manha|esta manha|de manha", r"\ba\s*m\b"],
+        "pm": [r"(?:da|de|pela|esta)\s+tarde|esta tarde|\bp\s*m\b"],
+        "notte": [r"(?:da|de|pela|esta)\s+noite|esta noite|de madrugada|da madrugada"],
+        "giorni": [(r"depois de amanha", ("off", 2)), (r"amanha", ("off", 1)), (r"hoje|esta noite|esta tarde|esta manha", ("off", 0))],
+        "settimana": {r"segunda(?:\s+feira)?": 0, r"terca(?:\s+feira)?": 1, r"quarta(?:\s+feira)?": 2, r"quinta(?:\s+feira)?": 3,
+                      r"sexta(?:\s+feira)?": 4, "sabado": 5, "domingo": 6},
+        "connettivi": r"^(?:de|a|para|que)\s+",
+        "riempitivi_fine": r"\s+(?:por favor|obrigado|obrigada)$",
+    },
     "en": {
         "trigger": r"\b(?:remind me|(?:set|add|create|make|put)\s+(?:a\s+|me a\s+)?reminder)\b",
         "nome": r"\breminders?\b",
@@ -200,19 +229,22 @@ VERBI_CANCELLA = {
     "it": r"cancella|cancellare|elimina|eliminare|togli|togliere|annulla|annullare|rimuovi|rimuovere|svuota",
     "fr": r"supprime|supprimer|annule|annuler|efface|effacer|enleve|enlever|retire|retirer",
     "es": r"borra|borrar|cancela|cancelar|elimina|eliminar|quita|quitar|anula|anular",
+    "pt": r"apaga|apagar|cancela|cancelar|elimina|eliminar|remove|remover|tira|tirar|exclui|excluir|deleta|deletar",
     "en": r"delete|cancel|remove|clear|erase|get rid of",
 }
 VERBI_ELENCO = {
     "it": r"che|quali|quanti|leggi|leggimi|elenca|elencami|dimmi|ho|mostra|mostrami|ascoltare|sentire|lista",
     "fr": r"quels|quel|quelles|lis|lis moi|liste|dis moi|ai|mes|montre|montre moi|combien",
     "es": r"que|cuales|cuantos|lee|leeme|lista|dime|tengo|muestra|muestrame|mis",
+    "pt": r"que|quais|quantos|quantas|le|leia|lista|liste|diz|diga|tenho|mostra|mostre|meus|minhas",
     "en": r"what|which|how many|read|list|tell me|have|show|my",
 }
-TUTTI = {"it": r"tutti|tutte|ogni", "fr": r"tous|toutes", "es": r"todos|todas", "en": r"all|every"}
+TUTTI = {"it": r"tutti|tutte|ogni", "fr": r"tous|toutes", "es": r"todos|todas", "pt": r"todos|todas|tudo", "en": r"all|every"}
 ORDINALI = {
     "it": {"primo": 1, "prima": 1, "secondo": 2, "seconda": 2, "terzo": 3, "terza": 3, "quarto": 4, "quarta": 4, "quinto": 5, "quinta": 5, "ultimo": -1, "ultima": -1},
     "fr": {"premier": 1, "premiere": 1, "deuxieme": 2, "second": 2, "seconde": 2, "troisieme": 3, "quatrieme": 4, "cinquieme": 5, "dernier": -1, "derniere": -1},
     "es": {"primero": 1, "primer": 1, "primera": 1, "segundo": 2, "segunda": 2, "tercero": 3, "tercer": 3, "tercera": 3, "cuarto": 4, "quinto": 5, "ultimo": -1, "ultima": -1},
+    "pt": {"primeiro": 1, "primeira": 1, "segundo": 2, "segunda": 2, "terceiro": 3, "terceira": 3, "quarto": 4, "quarta": 4, "quinto": 5, "quinta": 5, "ultimo": -1, "ultima": -1},
     "en": {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "last": -1},
 }
 
@@ -338,7 +370,7 @@ def analizza(testo, lg, solo_quando=False):
                 break
         if a.giorno is None:
             for nome, n in c["settimana"].items():
-                if prendi(r"(?:\b(?:el|le|il|on|next|the|este|ce|prossimo|prochain|proximo|de)\s+)?\b" + nome + r"\b"):
+                if prendi(r"(?:\b(?:el|le|il|on|next|the|este|ce|prossimo|prochain|proximo|de|na proxima|no proximo|na|no|nesta|neste|proxima)\s+)?\b" + nome + r"\b"):
                     a.giorno = ("wd", n)
                     break
     else:
@@ -595,6 +627,31 @@ TX = {
         "giorni": ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
         "unita": {"s": ("segundo", "segundos"), "m": ("minuto", "minutos"), "h": ("hora", "horas")},
     },
+    "pt": {
+        "conferma": "Certo: vou te lembrar {cosa} {quando}.",
+        "chiedi_cosa": "Do que devo te lembrar?",
+        "chiedi_quando": "Quando devo te lembrar?",
+        "chiedi_ampm": "Às {ora}: da manhã ou da tarde?",
+        "chiedi_giorno": "Já passou das {ora} de hoje. Você quer dizer amanhã?",
+        "non_capito_quando": "Não entendi quando. Tente de novo, por exemplo: me lembra amanhã às nove de comprar pão.",
+        "annullato": "Certo, deixa pra lá.",
+        "annuncio": "{nome}, estou te lembrando {cosa}.",
+        "annuncio_ritardo": "{nome}, você tinha um lembrete {quando}: estou te lembrando {cosa}.",
+        "nessuno": "Você não tem nenhum lembrete.",
+        "elenco_intro": "Você tem {n} lembretes.",
+        "elenco_uno": "Você tem um lembrete.",
+        "elenco_voce": "{i}: {cosa}, {quando}.",
+        "cancella_quale": "Qual você quer apagar? {elenco} Diga o número, ou todos.",
+        "cancella_conferma": "Você realmente quer apagar o lembrete: {cosa}, {quando}? Diga sim para confirmar.",
+        "cancella_tutti": "Você realmente quer apagar os {n} lembretes? Diga sim para confirmar.",
+        "cancellato": "Lembrete apagado.",
+        "cancellati": "Apaguei todos os lembretes.",
+        "mantenuto": "Certo, não apago nada.",
+        "non_capito": "Não entendi qual. Não apago nada.",
+        "oggi": "hoje", "domani": "amanhã", "dopodomani": "depois de amanhã", "tra": "daqui a",
+        "giorni": ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"],
+        "unita": {"s": ("segundo", "segundos"), "m": ("minuto", "minutos"), "h": ("hora", "horas")},
+    },
     "en": {
         "conferma": "Alright: I'll remind you {cosa} {quando}.",
         "chiedi_cosa": "What should I remind you about?",
@@ -628,6 +685,7 @@ ESEMPI = {
     "it": ["ricordami di chiamare Jorge alle cinque", "ricordami tra dieci minuti di spegnere il forno", "che promemoria ho", "cancella il promemoria"],
     "fr": ["rappelle-moi dans dix minutes d'éteindre le four", "rappelle-moi demain à neuf heures d'acheter du pain", "quels rappels ai-je", "supprime le rappel"],
     "es": ["recuérdame mañana a las nueve comprar pan", "recuérdame en diez minutos apagar el horno", "qué recordatorios tengo", "borra el recordatorio"],
+    "pt": ["me lembra amanhã às nove de comprar pão", "me lembra daqui a dez minutos de desligar o forno", "quais lembretes eu tenho", "apaga o lembrete"],
     "en": ["remind me in ten minutes to turn off the oven", "remind me tomorrow at nine to buy bread", "what reminders do I have", "delete the reminder"],
 }
 
@@ -659,6 +717,12 @@ def _ora_parlata(h, m, lg):
         if (h, m) == (0, 0):
             return "a medianoche"
         return ("a la una" if h == 1 else f"a las {h}") + (f" y {m}" if m else "")
+    if lg == "pt":
+        if (h, m) == (12, 0):
+            return "ao meio-dia"
+        if (h, m) == (0, 0):
+            return "à meia-noite"
+        return ("à uma" if h == 1 else f"às {h}") + (f" e {m}" if m else "")
     h12 = h % 12 or 12
     suff = "PM" if h >= 12 else "AM"
     if (h, m) == (12, 0):
@@ -705,6 +769,8 @@ def _infinito(cosa, lg):
         return bool(re.search(r"(er|ir|re|oir)$", prima))
     if lg == "es":
         return bool(re.search(r"(ar|er|ir|arse|erse|irse)$", prima))
+    if lg == "pt":
+        return bool(re.search(r"(ar|er|ir|or|ar se|ar me)$", prima))
     return True
 
 
@@ -725,4 +791,6 @@ def cosa_parlata(cosa, lg=None):
         if prima == "que":
             return cosa
         return f"que tienes que {cosa}" if _infinito(cosa, lg) else cosa
+    if lg == "pt":
+        return cosa if prima in ("que", "de") else (f"de {cosa}" if _infinito(cosa, lg) else cosa)
     return cosa if prima in ("to", "that", "about") else f"to {cosa}"

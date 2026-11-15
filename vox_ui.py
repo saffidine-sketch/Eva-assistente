@@ -25,6 +25,8 @@ from PySide6.QtGui import (QAction, QActionGroup, QColor, QCursor, QFont, QFontM
                            QPainter, QPen, QPixmap)
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
+import impostazioni_ui
+import profilo
 from vox_sfera import Sfera
 
 LARGHEZZA, ALTEZZA = 760, 600          # finestra GRANDE (la sfera è calcolata a metà e ingrandita)
@@ -34,7 +36,7 @@ DURATA_ANIMAZIONE = 0.5                # secondi: da grande a ridotta e vicevers
 OPACITA_GRANDE = 0.999                 # (non 1.0: così la finestra resta "a strati" e i clic possono passare attraverso)
 FILE_IMPOSTAZIONI = percorsi.dati("impostazioni_eva.json")
 
-AZZURRO = QColor(150, 200, 255)
+AZZURRO = QColor(255, 196, 105)             # (nome storico: ora è l'oro chiaro dei testi)
 
 # --- Windows: stili della finestra (clic che passano attraverso, mai il focus) ---------------------------
 GWL_EXSTYLE = -20
@@ -131,10 +133,10 @@ class BottoneX(QWidget):
     def paintEvent(self, _e):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        p.setBrush(QColor(200, 50, 60, 230) if self._sopra else QColor(8, 16, 44, 200))
-        p.setPen(QPen(QColor(150, 200, 255, 200), 1.2))
+        p.setBrush(QColor(200, 50, 60, 230) if self._sopra else QColor(34, 15, 4, 215))
+        p.setPen(QPen(QColor(255, 175, 70, 210), 1.2))
         p.drawEllipse(1, 1, self.DIM - 2, self.DIM - 2)
-        p.setPen(QPen(QColor(235, 245, 255), 1.8))
+        p.setPen(QPen(QColor(255, 240, 215), 1.8))
         m = 7
         p.drawLine(m, m, self.DIM - m, self.DIM - m)
         p.drawLine(self.DIM - m, m, m, self.DIM - m)
@@ -162,10 +164,11 @@ class Finestra(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.resize(LARGHEZZA, ALTEZZA)
 
-        self.sfera = Sfera(punti=2000, larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
+        self.sfera = Sfera(larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
         # stessa sfera (stessi puntini) ma con un quarto dei pixel: serve quando la finestra è piccola e costa meno
-        self.sfera_leggera = Sfera(punti=2000, larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
+        self.sfera_leggera = Sfera(larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
         self._sfera_in_uso = self.sfera
+        self._fase_sfera = "ascolto"   # fase corrente (si applica a qualunque sfera sia in uso)
         self.sfera_schermo = None        # sfera con le proporzioni dello schermo (benvenuto a schermo intero)
         self._immagine_dati = None
         self.visibile = False
@@ -291,8 +294,11 @@ class Finestra(QWidget):
                 if evento[1] != "ESEGUO":
                     self.progresso = None
                 fase = {"IN ASCOLTO": "ascolto", "ELABORO": "elaboro", "ESEGUO": "esegui"}.get(evento[1], "ascolto")
+                self._fase_sfera = fase
                 self.sfera.imposta_fase(fase)
                 self.sfera_leggera.imposta_fase(fase)
+                if self.sfera_schermo is not None:
+                    self.sfera_schermo.imposta_fase(fase)
             elif tipo == "frase":
                 self.frase = evento[1]
                 self.nota = ""               # nuova frase: tolgo la vecchia risposta
@@ -319,7 +325,7 @@ class Finestra(QWidget):
             self.vista = "schermo"
             self._schermo_scelto = self._schermo()
             g = self._schermo_scelto.geometry()          # tutto lo schermo
-            self.sfera_schermo = Sfera(punti=2400, larghezza=640,
+            self.sfera_schermo = Sfera(punti=90, larghezza=640,
                                        altezza=max(300, int(640 * g.height() / max(1, g.width()))))
             self._sfera_in_uso = self.sfera_schermo
             if not self.visibile:
@@ -342,8 +348,8 @@ class Finestra(QWidget):
             self.vista = "grande"
             if not self.visibile:
                 self.t_inizio = adesso
-                self.sfera = Sfera(punti=2000, larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
-                self.sfera_leggera = Sfera(punti=2000, larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
+                self.sfera = Sfera(larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
+                self.sfera_leggera = Sfera(larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
                 self._sfera_in_uso = self.sfera
                 self.stato, self.frase, self.nota = "IN ASCOLTO", "", ""
                 self.progresso = None
@@ -366,8 +372,8 @@ class Finestra(QWidget):
             self._schermo_scelto = self._schermo()
             if not self.visibile:                        # comparsa diretta, già piccola
                 self.t_inizio = adesso - DURATA_COMPARSA
-                self.sfera = Sfera(punti=2000, larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
-                self.sfera_leggera = Sfera(punti=2000, larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
+                self.sfera = Sfera(larghezza=LARGHEZZA // 2, altezza=ALTEZZA // 2)
+                self.sfera_leggera = Sfera(larghezza=LARGHEZZA // 4, altezza=ALTEZZA // 4)
                 self._sfera_in_uso = self.sfera_leggera
                 self.stato, self.frase, self.nota = "IN ASCOLTO", "", ""
                 self.progresso = None
@@ -520,7 +526,8 @@ class Finestra(QWidget):
         if sfera is not self._sfera_in_uso:
             self._copia_stato(self._sfera_in_uso, sfera)                        # nessuno scatto nel passaggio
             self._sfera_in_uso = sfera
-        quadro = sfera.render(crescita=crescita, livello=self.vox.livello)
+        sfera.imposta_fase(self._fase_sfera)        # anche le sfere create dopo (schermo intero) seguono la fase
+        quadro = sfera.render(crescita=crescita, livello=self.vox.livello, parla=self._eva_parla())
         self._immagine_dati = quadro                # tengo il riferimento finché si disegna
         qh, qw, _ = quadro.shape
         immagine = QImage(quadro.data, qw, qh, qw * 3, QImage.Format.Format_RGB888)
@@ -554,9 +561,17 @@ class Finestra(QWidget):
             p.drawText(QRectF(0, h - 26, w, 22), Qt.AlignmentFlag.AlignCenter, etichetta)
         p.end()
 
+    def _eva_parla(self):
+        """True mentre Eva sta dicendo qualcosa a voce: i fulmini dentro il cerchio vibrano."""
+        try:
+            return bool(self.vox.voce.parlando())
+        except Exception:
+            return False
+
     @staticmethod
     def _copia_stato(da, a):
         a.fase, a.t_fase, a.t, a.vt, a.angolo, a.livello = da.fase, da.t_fase, da.t, da.vt, da.angolo, da.livello
+        a.voce = da.voce
         a.param = {k: (v.copy() if hasattr(v, "copy") else v) for k, v in da.param.items()}
         a._ultimo = da._ultimo
 
@@ -578,12 +593,13 @@ class Finestra(QWidget):
             c.setAlphaF(max(0.0, min(1.0, a * alfa)))
             return c
 
-        nome = str(getattr(self.vox, "imp", {}).get("NOME_UTENTE", "") or "").strip()
-        scrivi("E.V.A.", h * 0.045, h * 0.026, col(150, 200, 255, 0.85), spazio=h * 0.012)
-        scrivi("BENVENUTO", h * 0.085, h * 0.016, col(150, 200, 255, 0.6), spazio=h * 0.008)
-        scrivi(f"Ciao {nome}" if nome else "Ciao", h * 0.125, h * 0.075, col(215, 235, 255, 1.0),
+        # il nome scelto nelle Impostazioni (profilo) vale prima di NOME_UTENTE di dettatura.py, come per la voce di Eva
+        nome = (profilo.nome() or str(getattr(self.vox, "imp", {}).get("NOME_UTENTE", "") or "")).strip()
+        scrivi("E.V.A.", h * 0.03, h * 0.026, col(150, 200, 255, 0.85), spazio=h * 0.012)
+        scrivi("BENVENUTO", h * 0.065, h * 0.016, col(150, 200, 255, 0.6), spazio=h * 0.008)
+        scrivi(f"Ciao {nome}" if nome else "Ciao", h * 0.093, h * 0.075, col(215, 235, 255, 1.0),
                spazio=h * 0.002, peso=QFont.Weight.Light)
-        scrivi("Di cosa hai bisogno oggi?", h * 0.225, h * 0.032, col(170, 205, 245, 0.9), spazio=h * 0.002)
+        scrivi("Di cosa hai bisogno oggi?", h * 0.165, h * 0.032, col(170, 205, 245, 0.9), spazio=h * 0.002)
 
         # stato in basso, tra due linee sottili
         y = int(h * 0.80)
@@ -594,10 +610,10 @@ class Finestra(QWidget):
         larghezza_testo = QFontMetrics(font).horizontalAdvance(etichetta) + sp * len(etichetta)
         sinistra = w / 2 - larghezza_testo / 2 - h * 0.03
         destra = w / 2 + larghezza_testo / 2 + h * 0.03
-        p.setPen(QPen(col(150, 200, 255, 0.45), 1))
+        p.setPen(QPen(col(255, 175, 70, 0.45), 1))
         p.drawLine(int(sinistra - h * 0.25), y, int(sinistra), y)
         p.drawLine(int(destra), y, int(destra + h * 0.25), y)
-        scrivi(etichetta, y - h * 0.014, h * 0.018, col(150, 200, 255, 0.95), spazio=sp, altezza=h * 0.03)
+        scrivi(etichetta, y - h * 0.014, h * 0.018, col(255, 196, 105, 0.95), spazio=sp, altezza=h * 0.03)
         if self.frase:
             scrivi(self.frase, y + h * 0.035, h * 0.02, col(140, 175, 225, 0.85), altezza=h * 0.035,
                    larg=w - 2 * h * 0.1, ax=h * 0.1)
@@ -639,12 +655,12 @@ class Finestra(QWidget):
         p.setFont(font)
         if self.frase:
             testo = QFontMetrics(font).elidedText(self.frase, Qt.TextElideMode.ElideRight, LARGHEZZA - 120)
-            tenue = QColor(140, 175, 225)
+            tenue = QColor(215, 165, 100)
             tenue.setAlphaF(0.85 * alfa)
             p.setPen(tenue)
             p.drawText(QRectF(60, y + 20, LARGHEZZA - 120, 22), Qt.AlignmentFlag.AlignCenter, testo)
         if self.nota:
-            chiaro = QColor(205, 228, 255)
+            chiaro = QColor(255, 236, 205)
             chiaro.setAlphaF(0.95 * alfa)
             p.setPen(chiaro)
             p.drawText(QRectF(60, y + 44, LARGHEZZA - 120, 46),
@@ -653,16 +669,16 @@ class Finestra(QWidget):
 
 
 def _icona():
-    """Piccola icona blu per l'area di notifica."""
+    """Piccola icona arancio per l'area di notifica."""
     pix = QPixmap(64, 64)
     pix.fill(Qt.GlobalColor.transparent)
     p = QPainter(pix)
     p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-    p.setBrush(QColor(8, 16, 44))
-    p.setPen(QPen(QColor(70, 165, 255), 4))
+    p.setBrush(QColor(34, 15, 4))
+    p.setPen(QPen(QColor(255, 150, 40), 4))
     p.drawEllipse(6, 6, 52, 52)
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QColor(120, 200, 255))
+    p.setBrush(QColor(255, 205, 90))
     p.drawEllipse(24, 24, 16, 16)
     p.end()
     return QIcon(pix)
@@ -684,9 +700,15 @@ def esegui(vox, log, dopo=None):
         menu = QMenu()
         azione_attiva = QAction("Attiva ora", menu)
         azione_attiva.triggered.connect(vox.attiva_ora)
+        azione_imp = QAction("Impostazioni...", menu)
+        azione_imp.triggered.connect(lambda: impostazioni_ui.mostra_impostazioni())
+        azione_priv = QAction("Privacy", menu)
+        azione_priv.triggered.connect(lambda: impostazioni_ui.mostra_privacy())
         azione_esci = QAction("Esci", menu)
         azione_esci.triggered.connect(app.quit)
         menu.addAction(azione_attiva)
+        menu.addAction(azione_imp)
+        menu.addAction(azione_priv)
         menu.addSeparator()
         menu.addAction(azione_esci)
         vassoio.setContextMenu(menu)
@@ -710,6 +732,11 @@ def esegui(vox, log, dopo=None):
         else:
             finestra.imposta_vista("ridotta")
     def _partenza():
+        if profilo.primo_avvio():                  # informativa privacy + nome e stile, una volta sola
+            try:
+                impostazioni_ui.mostra_privacy(primo_avvio=True)
+            except Exception:
+                log("Non riesco a mostrare la schermata di benvenuto/privacy")
         _mostra_all_avvio()
         t0 = vox.imp.get("_T0")
         log("TEMPO avvio: sfera visibile" + (f" a {_t.perf_counter() - t0:.1f} s dall'accensione" if t0 else ""))

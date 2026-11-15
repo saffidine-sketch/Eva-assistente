@@ -180,7 +180,8 @@
     "Ancora non so farlo, {nome}. Prova con un comando, per esempio «apri Chrome», oppure dì «aiuto»."
   ],
 
-  "vox_da_solo": ["Dimmi, {nome}.", "Sì, {nome}?", "Ti ascolto, {nome}.", "Eccomi, {nome}."],
+  "vox_da_solo": ["Dimmi, {nome}.", "Sì, {nome}?", "Ti ascolto, {nome}.", "Eccomi, {nome}.",
+                  "Sono qui, capo. Dimmi tutto.", "Ti ascolto, {nome}. Stupiscimi.", "Agli ordini!", "Dimmi, {nome}, che si fa?"],
 
   "conferme": {
     "apri": ["Apro {cosa}.", "Ho aperto {cosa}.", "Ecco {cosa}.", "{cosa}, subito."],

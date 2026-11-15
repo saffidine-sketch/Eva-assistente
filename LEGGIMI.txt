@@ -1,4 +1,4 @@
-EVA - LEGGIMI (versione 2.2)
+EVA - LEGGIMI (versione 2.3)
 ============================
 Per installare Eva e creare la chiave gratuita di Groq vedi README.md.
 Assistente vocale per Windows. Per i dettagli su copia e sposta guarda anche aiuto_eva.txt.
@@ -24,8 +24,96 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
   I comandi veri vengono SEMPRE prima della chat: Eva non risponde "non posso" a un ordine che sa eseguire.
   Eva può aprire e chiudere programmi, gestire file e cartelle e dettare testo.
 
+=====================================================================
+PRIVACY: COSA RESTA SUL PC E COSA VIENE INVIATO A GROQ
+=====================================================================
+Resta sul tuo PC
+  - La voce: il microfono viene trascritto in locale (Whisper). L'audio non lascia mai il computer.
+  - Il profilo (nome e stile) in %APPDATA%\Eva\profilo_eva.json, fuori dalla cartella del programma.
+  - Le impostazioni, l'indice delle cartelle, i promemoria, la rubrica e i registri (eva.log), nella cartella di Eva.
+  - La memoria della conversazione in corso: solo in RAM, sparisce quando Eva si chiude.
+  - La chiave Groq: nella variabile d'ambiente GROQ_API_KEY del tuo utente Windows. Eva non la scrive mai in un file.
+Viene inviato a Groq (servizio gratuito, groq.com)
+  - Il TESTO di quello che dici (gia' trascritto) e le ultime frasi della conversazione.
+  - Le istruzioni di Eva, che contengono il nome e lo stile che hai scelto.
+  - NON vengono inviati: l'audio, i tuoi file, l'indice delle cartelle. Se nomini una cartella a voce, il nome
+    fa parte del testo che dici e quindi va a Groq.
+  - Per il meteo solo la citta' va a Open-Meteo (non a Groq).
+Al primo avvio Eva mostra queste stesse informazioni; si rileggono dall'icona accanto all'orologio > Privacy.
+
+MEMORIA PERSISTENTE (appunti.py) - Fase 2
+  Eva ricorda nome, appunti e cose da ricordare anche dopo averla spenta. Tutto sta in %APPDATA%\Eva\memoria_eva.json
+  (il nome in profilo_eva.json), FUORI dalla cartella del programma e dal repository: niente dati personali nel pacchetto.
+  Si rilegge a ogni avvio (eva.log: "Memoria persistente: N voci"). Si puo' aprire e correggere a mano; se il file e'
+  rovinato Eva parte con la memoria vuota e non lo sovrascrive finche' non salvi qualcosa. Solo in italiano.
+    "ricorda che il wifi di casa si chiama Casa5G"   salva un ricordo (anche: ricordati che, tieni a mente che, memorizza)
+    "prendi nota: comprare le batterie"              salva un appunto (anche: annota, appunta, nuovo appunto)
+    "chiamami Marco" / "come mi chiamo?"             salva / dice il nome
+    "che appunti ho?" / "cosa ricordi di me?"        Eva legge le ultime 6 voci
+    "dimentica che il wifi si chiama Casa5G"         toglie la voce che somiglia di piu'
+  Massimo 100 voci (le piu' vecchie escono), 300 caratteri l'una. A Groq vanno le 20 piu' recenti (max 1500 caratteri),
+  come dati dell'utente e non come istruzioni: non scrivere password. Il contenuto non viene ripetuto in eva.log
+  (ma la frase che dici, come ogni frase, si'). "Dimentica tutto" svuota solo la conversazione, non gli appunti.
+  Frasi con un orario ("ricordami alle 5 di...") restano promemoria (promemoria.json).
+
+AGENTE: RICERCA SU INTERNET (vox_agente.py) - Fase 3
+  Eva puo' usare uno strumento da sola: la ricerca su internet. Se non sa una cosa o serve un dato aggiornato (notizie,
+  risultati sportivi, prezzi, chi ricopre una carica...), Groq decide di cercare. Eva dice "Un attimo, cerco su internet",
+  cerca, Groq legge i risultati e Eva risponde a voce in una o due frasi. Per le chiacchiere, il meteo, i comandi, i
+  promemoria e gli appunti non cerca (restano come prima).
+  - UNA sola ricerca per domanda; i risultati sono titoli e riassunti (non apre le pagine) e sono trattati come testo non
+    fidato: Groq non deve seguire istruzioni scritte dentro i risultati.
+  - Risultati: per ognuno titolo, fonte, data e un testo breve (fino a 450 caratteri, 2400 in tutto), perche' il punteggio
+    sta nel testo e non nel titolo. Groq deve rispondere SOLO con quello che c'e' scritto: se non c'e', dice che non l'ha
+    trovato, senza inventare. Per sport e notizie (risultato, partita, ultima, oggi, ieri...) la funzione news di ddgs va
+    PRIMA (ha titoli datati col punteggio) ed e' completata con la ricerca web; per le altre domande vale il contrario.
+  - Se la ricerca trova meno del necessario riprova UNA volta con l'altro tipo. Se non trova niente Eva dice "Non ho
+    trovato risultati per questa ricerca" (non parla di internet). "Non riesco a contattare il servizio di ricerca" si dice
+    solo se TUTTI e due i tentativi falliscono per un errore vero (rete, limite, timeout). Sono frasi fisse del codice.
+  - RICERCA OBBLIGATORIA: per domande su risultati/punteggi, meteo, notizie e per "cerca ..." (senza nominare Google o
+    YouTube) Eva cerca SEMPRE su internet e risponde a voce: il codice impone la ricerca a Groq (tool_choice), non puo'
+    rispondere "a memoria". Il browser si apre SOLO con "apri Google" / "apri il browser" (e con "cerca su Google ..." /
+    "cerca su YouTube ...", dove nomini tu il sito). Anche l'azione "cerca" tradotta da Groq non apre piu' il browser.
+    "cerca il file ..." / "cerca la cartella ..." restano ricerche sul disco. Un seguito come "e domani?" dopo una ricerca
+    cerca di nuovo.
+  - SE NON TROVA NIENTE: prima ricerca (web o news), poi Groq propone una frase di ricerca DIVERSA (se ripropone la stessa
+    la riformula il codice) e si cerca una seconda volta; se anche questa e' vuota Eva dice "Non ho trovato risultati
+    per questa ricerca". Nel prompt c'e' la data di oggi: i risultati vecchi non valgono per "oggi" o "domani".
+  - METEO: con METEO_CON_RICERCA = True (predefinito, dettatura.py) anche il meteo passa dalla ricerca. E' meno preciso
+    di Open-Meteo (i siti di meteo non sempre danno il dato di oggi): se preferisci il vecchio meteo con la citta'
+    predefinita, METEO_CON_RICERCA = False. Se la ricerca non e' disponibile (ddgs mancante o AGENTE_RICERCA = False)
+    il meteo resta quello di Open-Meteo.
+  - Serve il pacchetto ddgs (DuckDuckGo, senza chiave):  py -3.12 -m pip install ddgs   Senza, lo strumento non viene offerto e Eva
+    funziona come prima. Se Groq rifiuta gli strumenti, Eva usa la chat di sempre (vedi eva.log).
+  - Privacy: la domanda di ricerca esce dal PC verso i motori di ricerca che ddgs interroga (DuckDuckGo, Yahoo, Brave, Wikipedia...). Il prompt vieta di metterci nome e appunti.
+  - eva.log: "Agente: Groq chiede di cercare su internet: «...»" e "Ricerca internet: «...» -> N risultati in X s".
+  - Si spegne con AGENTE_RICERCA = False in dettatura.py. Se Whisper sente male la domanda, la ricerca sara' sbagliata.
+  - Copia di sicurezza prima della modifica: backup\agente_ricerca_* e tag git pre-agente-ricerca.
+
+TRASCRIZIONE INCERTA: CHIEDE DI RIPETERE (vox_incerte.py, nomi_noti.json)
+  Se Eva non sente bene una parola importante, NON indovina: dice "Non ho capito bene la parola «intera». Puoi ripetere?"
+  e non esegue niente (non propone cosa credeva di aver sentito). Whisper da' una probabilita' per ogni parola; una
+  parola e' sospetta se:
+    - assomiglia a un NOME NOTO di nomi_noti.json (squadre, ecc.) senza esserlo e non e' sicura: "l'intera" / "linter" /
+      "l'interie" al posto di "l'Inter". Vale per qualsiasi frase;
+    - ha una probabilita' bassa (sotto PAROLA_PROB_MIN = 0.45). Vale solo per frasi IMPORTANTI: ricerche (risultati,
+      meteo, notizie, "cerca ..."), ordini con un nome ("apri la cartella ..."), copia/sposta. Una chiacchiera con una
+      parola storpiata passa; le parole grammaticali (chi, che, a...), il nome "Eva", "chiudi/basta" e i comandi fissi
+      della libreria non contano mai.
+  Una sola richiesta di fila (entro 40 secondi): se anche la seconda volta e' incerta Eva va avanti. Non succede con F9
+  (dettatura), ne' mentre Eva aspetta un si/no o una scelta. eva.log: "Trascrizione incerta: «...» (...): chiedo di ripetere".
+  Impostazioni in dettatura.py: RIPETI_SE_INCERTA (False = spento), PAROLA_PROB_MIN (piu' alta = chiede piu' spesso).
+  nomi_noti.json: "nomi" = cio' che Eva deve sentire bene; "valide" = parole comuni da non scambiare per un nome. Si
+  ampliano a mano (riavvia Eva). Costo: word_timestamps rallenta la trascrizione di circa 0,1 s (misurato).
+
+IMPOSTAZIONI: NOME E STILE
+  Icona accanto all'orologio > Impostazioni: scegli come ti chiama Eva e lo stile (amichevole o formale).
+  Vale subito, senza riavviare. Eva chiede un chiarimento quando non e' sicura e dissente con garbo quando serve.
+
 2) ELENCO DEI FILE
   Programma
+    profilo.py            Nome e stile scelti dall'utente (file in %APPDATA%\Eva) e testo della privacy.
+    impostazioni_ui.py    Finestre Impostazioni e Privacy.
     dettatura.py          Il file principale. In cima ci sono tutte le impostazioni. Avvia tutto.
     vox_core.py           Il "cuore": ascolta il microfono, F9, trascrive, decide cosa fare, saluta, meteo.
     vox_ui.py             La finestra con la sfera, il pulsante X, l'icona accanto all'orologio.
@@ -56,7 +144,9 @@ COME FUNZIONA EVA (aggiornato il 06/11/2026)
     rubrica.json          Contatti per le mail.
     appunti.json          I tuoi appunti ("prendi nota ..."). Dati personali: non va mai pubblicato.
     promemoria.json       Promemoria, timer e sveglie ancora da annunciare (si crea da solo).
-    impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo).
+    impostazioni_eva.json Posizione della sfera e città del meteo (si crea da solo). Voce facoltativa "parole_extra":
+                          ["nome", ...] = parole TUE da suggerire a Whisper (la tua città, un nome che sente male). Resta sul
+                          tuo PC, non nel codice pubblico. Massimo 20 parole; si legge a ogni avvio.
     indice_cartelle.json  Indice delle tue cartelle e file (si aggiorna da solo).
     non_trovati.txt       Cose chieste e non trovate.
   Registri (log)
@@ -192,15 +282,15 @@ REGISTRO DELLE MODIFICHE
   - Trascrizione "vuota" a riposo con 0,01 s: è normale. Il rilevatore di volume scatta anche con rumori (colpi,
     ronzii, tastiera); il filtro delle pause di Whisper non trova parlato e non fa nemmeno la trascrizione.
 =====================================================================
-LINGUE (italiano, francese, spagnolo, inglese) - 06/11/2026
+LINGUE (italiano, francese, spagnolo, inglese, portoghese) - 06/11/2026
 =====================================================================
-  Cambiare lingua a voce:  "Eva, parla francese" / "Eva, speak English" / "Eva, habla español" / "Eva, parle italien" /
+  Cambiare lingua a voce:  "Eva, parla francese" / "Eva, speak English" / "Eva, habla español" / "Eva, fala português" / "Eva, parle italien" /
                            "Eva, cambia lingua in spagnolo" / "switch to French" / "passe en anglais".
   La scelta si SALVA in impostazioni_eva.json (chiave "lingua") e vale anche al prossimo avvio. La lingua di partenza,
   se non c'è niente salvato, è LINGUA in cima a dettatura.py. Per tornare a quella: cancella la chiave "lingua".
   Per ogni lingua cambiano INSIEME:
     - la trascrizione del microfono (lingua e parole suggerite a Whisper);
-    - la voce di Windows (Elsa italiano, Hortense francese, Helena spagnolo, Zira inglese; si cambiano con VOCI_LINGUE
+    - la voce di Windows (Elsa italiano, Hortense francese, Helena spagnolo, Zira inglese, Maria portoghese (va installata da Impostazioni di Windows); si cambiano con VOCI_LINGUE
       in dettatura.py);
     - i comandi: open/ouvre/abre = apri, close/ferme/cierra = chiudi, search/cherche/busca = cerca, volume up/monte le
       volume/sube el volumen, move aside/mets-toi de côté/ponte a un lado, ecc. Eva li traduce nei comandi interni
@@ -227,7 +317,7 @@ LINGUE (italiano, francese, spagnolo, inglese) - 06/11/2026
 LIBRERIA DEI COMANDI PER IL PC (comandi_pc.py) - 06/11/2026
 =====================================================================
   Tabella unica, facile da ampliare: ogni comando e' UNA riga C(...) in comandi_pc.py, con azione, frasi in italiano,
-  francese, spagnolo e inglese (varianti naturali comprese) e la frase che Eva dice dopo. Per aggiungerne uno basta
+  francese, spagnolo, inglese e portoghese (varianti naturali comprese) e la frase che Eva dice dopo. Per aggiungerne uno basta
   copiare una riga e cambiare id, azione e frasi (il file spiega i tipi di azione in cima). 56 comandi, 9 categorie.
   Prima del confronto Eva toglie "per favore", "puoi", "can you", "peux-tu", "por favor"... davanti e dietro.
   FINESTRE      ingrandisci / riduci a icona / ripristina / chiudi questa finestra / finestra successiva e precedente /
